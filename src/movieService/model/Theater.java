@@ -16,6 +16,7 @@ public class Theater {
 //		Theater.selectTheaterTime(sc, context);
 //
 //	}
+	static String selectedTheater;
 
 	String theaterName;
 
@@ -23,6 +24,7 @@ public class Theater {
 		this.theaterName = theaterName;
 	}
 
+	// 생성자
 	public Theater(String theaterName) {
 		this.theaterName = theaterName;
 	}
@@ -32,7 +34,7 @@ public class Theater {
 	}
 
 	// 극장 선택 메서드
-	public static void selectTheater(Scanner sc, Context<Object> context) {
+	public String selectTheater(Scanner sc, Context<Theater> context) {
 		// 극장선택 후 영화로 넘어가는 로직
 
 		// 무비스케줄 스트림 선언
@@ -51,18 +53,21 @@ public class Theater {
 		Theater theater = new Theater(selectedTheater);
 		System.out.println(theater.theaterName);
 
+		return theater.theaterName;
+
 	}
 
-	public static void selectTheaterTime(Scanner sc, Context<Object> context) {
+	public static void selectTheaterTime(Scanner sc, Context<Theater> context, String movieName) {
 		// 극장선택 후 시간선택으로 넘어가는 로직
 
 		// movie.getTitle의 값 가져오기
-		Movie movie = new Movie();
-		String title = movie.getTitle();
+//		Movie movie = new Movie();
+//		Movie title = context.getData().get();
+//		
 
 		// title에 맞는 극장 get.TheaterName을 받아옴
 		Stream<MovieSchedule> ms = MovieSchedule.movieS.stream();
-		List<String> theaterOption = ms.filter(n -> n.getTitle().equals(title)).map(MovieSchedule::getTheaterName)
+		List<String> theaterOption = ms.filter(n -> n.getTitle().equals(movieName)).map(MovieSchedule::getTheaterName)
 				.collect(Collectors.toList());
 
 		// 목록 출력 후 선택
@@ -71,12 +76,23 @@ public class Theater {
 		}
 		System.out.println("\n극장을 선택하세요 : ");
 		int inputTheater = Integer.parseInt(sc.nextLine());
-		String selectedTheater = theaterOption.get(inputTheater - 1);
+		selectedTheater = theaterOption.get(inputTheater - 1);
 
 		// 입력받은 값 저장
-		Theater theater = new Theater(selectedTheater);
-		System.out.println(theater.theaterName);
+//		Theater theater = new Theater(selectedTheater);
+//		System.out.println(theater.theaterName);
+		Theater sTheater = new Theater(selectedTheater);
+		context.getData().put(selectedTheater, sTheater);
 
+		// 저장된 값 출력
+		Theater retrievedTheater = context.getData().get(selectedTheater);
+		System.out.println("저장된 극장: " + retrievedTheater.toString());
+
+	}
+
+	@Override
+	public String toString() {
+		return "극장 이름: " + selectedTheater;
 	}
 
 }
