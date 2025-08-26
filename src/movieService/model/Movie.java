@@ -38,103 +38,105 @@ public class Movie {
 		this.date = date;
 	}
 
-//	public static void selectMovieByTitle(Scanner sc, Context<Movie> context, String theaterName) {
-//		boolean found = false;
-//
-//		if (selectedTheater != null) {
-//			for (MovieSchedule schedule : MovieSchedule.movieS) {
-//				if (schedule.getTheaterName().equals(selectedTheater.getName())) {
-//					System.out.println(schedule.getTitle() + "\t");
-//				}
-//			}
-//		} else {
-//			System.out.println("선택된 극장이 없습니다.");
-//		}
-//		System.out.println();
-//		// 영화 선택
-//		System.out.println("영화를 선택하세요.>");
-//		String m = sc.nextLine();
-//
-//		for (MovieSchedule schedule : MovieSchedule.movieS) {
-//			// 사용자에게 입력받은 영화와 영화리스트 값 중 하나가 일치하면,
-//			if (schedule.getTitle().equals(m)) {
-//				Movie sMovie = new Movie(m, "");
-//				// context로 movie타입의 객체로 사용자에게 입력받은 영화제목과 날짜는 빈 문자열로 저장
-//				context.getData().put(m, sMovie);
-//				found = true;
-//				return;
-//			}
-//		}
-//		if (!found) {
-//			System.out.println("해당 영화는 존재하지 않습니다.");
-//			System.out.println("다시 영화를 선택하세요> ");
-//		}
-//
-//	}
-
 	public String selectMovie(Scanner sc, Context<Movie> context, String theaterName) {
 		boolean found = false;
+		int idx = 1;
+		ArrayList<String> movieList = new ArrayList<>();
 
 //		Theater theater = new Theater(theaterName);
+		System.out.println("선택된 극장" + theaterName);
 
 		for (MovieSchedule schedule : MovieSchedule.movieS) {
 			if (theaterName == null || theaterName.isEmpty()) {
 				// theaterName이 없으면 모든 영화 제목 출력
-				System.out.print(schedule.getTitle() + "\t");
+				System.out.println(idx + ". " + schedule.getTitle());
+				movieList.add(schedule.getTitle());
+				idx++;
 			} else if (schedule.getTheaterName().equals(theaterName)) {
+//				System.out.println(schedule.getTheaterName().equals(theaterName));
+
 				// theaterName이 존재하면 해당 극장에서 상영하는 영화만 출력
-				System.out.print(schedule.getTitle() + "\t");
+				System.out.println(idx + ". " + schedule.getTitle());
+				movieList.add(schedule.getTitle());
+				idx++;
 			}
 		}
 		System.out.println(); // 마지막에 줄바꿈
 
 		// 영화 선택
 		System.out.println("영화를 선택하세요.>");
-		String m = sc.nextLine();
+		int choice = Integer.parseInt(sc.nextLine());
+		String selectedMovie = movieList.get(choice - 1); // 선택된 영화 제목
 
+		found = false;
+
+		// MovieSchedule에서 선택된 영화와 일치하는지 확인
 		for (MovieSchedule schedule : MovieSchedule.movieS) {
-			// 사용자에게 입력받은 영화와 영화리스트 값 중 하나가 일치하면,
-			if (schedule.getTitle().equals(m)) {
-				Movie sMovie = new Movie(m, "");
-				// context로 movie타입의 객체로 사용자에게 입력받은 영화제목과 날짜는 빈 문자열로 저장
-				context.getData().put(m, sMovie);
-//				System.out.println(context.getData());
+			if (schedule.getTitle().equals(selectedMovie)) {
+				// 선택한 영화 정보로 Movie 객체 생성
+				Movie sMovie = new Movie(selectedMovie, "");
+				// context에 저장
+				context.getData().put("NoDateSelectMovie", sMovie);
 				found = true;
-				return m;
+				System.out.println("선택된 영화: " + selectedMovie);
+				return selectedMovie; // 실제 영화 제목 반환
 			}
 		}
+
 		if (!found) {
 			System.out.println("해당 영화는 존재하지 않습니다.");
 			System.out.println("다시 영화를 선택하세요> ");
 		}
-		return m;
+
+		return selectedMovie; // 선택한 영화 제목 반환
 
 	}
 
 	// 영화 선택 후에만 날짜 선택 받을 수 있다.
-	public static void selectDate(Scanner sc, Context<User> context) {
-		boolean found = false;
+	public static void selectDate(Scanner sc, Context<Theater> theaterContext, Context<Movie> movieContext) {
 
-//		System.out.println("날짜를 선택하세요>");
-//		String d = sc.nextLine();
-//		
-//		for (MovieSchedule schedule : MovieSchedule.movieS) {
-//			// 사용자에게 입력받은 영화와 영화리스트 값 중 하나가 일치하면,
-//			if (schedule.getTitle().equals(d)) {
-//				Movie sMovie = new Movie(d, "");
-//				//context로 movie타입의 객체로 사용자에게 입력받은 영화제목과 날짜는 빈 문자열로 저장 
-//				context.getData().put(d, sMovie);
-//				found = true;
-//				return;
-//			}
-//		}
-//		if (!found) {
-//			System.out.println("해당 영화는 존재하지 않습니다.");
-//			System.out.println("다시 영화를 선택하세요> ");
-//		}
-//		
-//		
+		// Context에서 "selectMovie" Key로 저장된 Movie 객체 가져오기
+		Movie movie = movieContext.getData().get("NoDateSelectMovie");
 
+		String selectMovie = movie.getTitle();
+		System.out.println("선택된 영화: " + selectMovie);
+
+		// Context에서 "selectTheater" Key로 저장된 Theater 객체 가져오기
+		Theater theater = theaterContext.getData().get("selectTheater");
+
+		String selectTheater = theater.getTheaterName();
+		System.out.println("선택된 극장: " + selectTheater);
+
+		int idx = 1;
+		ArrayList<String> movieList = new ArrayList<>();
+
+		// MovieSchedule에서 선택된 영화와 극장 일치하는 날짜 리스트만 출력
+		for (MovieSchedule schedule : MovieSchedule.movieS) {
+			if (schedule.getTitle().equals(selectMovie) && schedule.getTheaterName().equals(selectTheater)) {
+				System.out.println(idx + ". " + schedule.getDate());
+				movieList.add(schedule.getDate());
+				idx++;
+			}
+		}
+
+		System.out.println("날짜를 선택하세요>");
+		int choice = Integer.parseInt(sc.nextLine());
+		String selectDate = movieList.get(choice - 1); // 선택된 날짜
+
+		// 선택한 영화 정보로 Movie 객체 생성
+		Movie sMovie = new Movie(selectMovie, selectDate);
+		// context에 저장
+		movieContext.getData().put("PullMovie", sMovie);
+		System.out.println("선택된 날짜: " + selectDate);
+
+		if (selectDate == null || selectDate == "") {
+			System.out.println("해당 날짜에 상영하는 영화는 존재하지 않습니다.");
+		}
+	}
+
+	@Override
+	public String toString() {
+		return this.title;
 	}
 
 }
