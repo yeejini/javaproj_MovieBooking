@@ -16,7 +16,7 @@ public class Theater {
 //		Theater.selectTheaterTime(sc, context);
 //
 //	}
-	static String selectedTheater;
+	static String selectTheater;
 
 	String theaterName;
 
@@ -49,11 +49,17 @@ public class Theater {
 		int inputTheater = Integer.parseInt(sc.nextLine());
 
 		// 입력받은 값 저장
-		String selectedTheater = theaterOption.get(inputTheater - 1);
-		Theater theater = new Theater(selectedTheater);
-		System.out.println(theater.theaterName);
+		String selectTheater = theaterOption.get(inputTheater - 1);
+//		Theater theater = new Theater(selectedTheater);
+//		System.out.println(theater.theaterName);
+		Theater sTheater = new Theater(selectTheater);
+		context.getData().put("selectTheater", sTheater);
 
-		return theater.theaterName;
+		// 저장된 값 출력
+		Theater retrievedTheater = context.getData().get("selectTheater");
+		System.out.println("저장된 극장: " + retrievedTheater.toString());
+
+		return retrievedTheater.toString();
 
 	}
 
@@ -76,23 +82,23 @@ public class Theater {
 		}
 		System.out.println("\n극장을 선택하세요 : ");
 		int inputTheater = Integer.parseInt(sc.nextLine());
-		selectedTheater = theaterOption.get(inputTheater - 1);
+		selectTheater = theaterOption.get(inputTheater - 1);
 
 		// 입력받은 값 저장
 //		Theater theater = new Theater(selectedTheater);
 //		System.out.println(theater.theaterName);
-		Theater sTheater = new Theater(selectedTheater);
-		context.getData().put(selectedTheater, sTheater);
+		Theater sTheater = new Theater(selectTheater);
+		context.getData().put("selectTheater", sTheater);
 
 		// 저장된 값 출력
-		Theater retrievedTheater = context.getData().get(selectedTheater);
+		Theater retrievedTheater = context.getData().get("selectTheater");
 		System.out.println("저장된 극장: " + retrievedTheater.toString());
 
 	}
 
 	@Override
 	public String toString() {
-		return "극장 이름: " + selectedTheater;
+		return this.theaterName;
 	}
 
 }
