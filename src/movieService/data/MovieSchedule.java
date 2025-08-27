@@ -9,12 +9,25 @@ public class MovieSchedule {
 	private String date;
 	private String time;
 
+	private Integer[][] seats; // 각 스케줄별 좌석 배열
+
+	public Integer[][] getSeats() {
+		return seats;
+	}
+
+	public void setSeats(Integer[][] seats) {
+		this.seats = seats;
+	}
+
 	public MovieSchedule(String title, String theaterName, String screenName, String date, String time) {
 		this.title = title;
 		this.screenName = screenName;
 		this.theaterName = theaterName;
 		this.date = date;
 		this.time = time;
+
+		// 스케줄 생성 시 좌석 배열 초기화
+        this.seats = new Integer[5][5]; 
 	}
 
 	public String getTitle() {
@@ -57,8 +70,8 @@ public class MovieSchedule {
 		this.time = time;
 	}
 
-	public static final List<MovieSchedule> movieS = List.of(new MovieSchedule("좀비딸", "롯데시네마", "1", "8/26", "14:00"),
-			new MovieSchedule("귀멸의칼날", "CGV", "3", "8/28", "11:00"),
-			new MovieSchedule("F1", "메가박스", "5", "9/26", "16:00"));
+	public static final List<MovieSchedule> movieS = List.of(new MovieSchedule("좀비딸", "롯데시네마", "1", "2025-08-26", "14:00"),
+			new MovieSchedule("귀멸의칼날", "CGV", "3", "2025-08-29", "11:00"),
+			new MovieSchedule("F1", "메가박스", "5", "2025-09-26", "16:00"));
 
 }
