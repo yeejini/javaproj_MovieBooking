@@ -15,7 +15,7 @@ public class MovieBooking {
 	public static void main(String[] args) {
 		ArrayList<MovieSchedule> ms = new ArrayList<>();
 
-  Context<Reservation> reservContext = new Context<>();
+		Context<Reservation> reservContext = new Context<>();
 
 		String loginMsg = """
 				영화관에 오신 것을 환영합니다 !
@@ -35,7 +35,6 @@ public class MovieBooking {
 
 		Scanner sc = new Scanner(System.in);
 
-
 		boolean run = true;
 
 		// 회원가입, 로그인 메뉴 기능 로직
@@ -54,7 +53,6 @@ public class MovieBooking {
 				break;
 			}
 
-
 			case "2" -> {
 				User.login(sc, reservContext);
 				run = false;
@@ -62,7 +60,6 @@ public class MovieBooking {
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
-
 
 		// 메인 메뉴 기능 로직 : mainMenu
 
