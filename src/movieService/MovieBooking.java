@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import movieService.controller.Context;
+import movieService.controller.Reservation;
 import movieService.data.MovieSchedule;
 import movieService.model.Movie;
 import movieService.model.Theater;
@@ -13,6 +14,8 @@ public class MovieBooking {
 
 	public static void main(String[] args) {
 		ArrayList<MovieSchedule> ms = new ArrayList<>();
+
+  Context<Reservation> reservContext = new Context<>();
 
 		String loginMsg = """
 				영화관에 오신 것을 환영합니다 !
@@ -32,7 +35,7 @@ public class MovieBooking {
 
 		Scanner sc = new Scanner(System.in);
 
-		Context<User> account = new Context<>();
+
 		boolean run = true;
 
 		// 회원가입, 로그인 메뉴 기능 로직
@@ -45,19 +48,25 @@ public class MovieBooking {
 				return;
 			}
 			switch (loginMenu) {
-			case "1" -> User.signUp(sc, account);
+
+			case "1" -> {
+				User.signUp(sc, reservContext);
+				break;
+			}
+
+
 			case "2" -> {
-				User.login(sc, account);
+				User.login(sc, reservContext);
 				run = false;
 			}
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
 
-		// 회원가입, 로그인 후 메인 메뉴 기능
+
+		// 메인 메뉴 기능 로직 : mainMenu
+
 		run = true;
-		Context<Movie> movie = new Context<>();
-		Context<Theater> theater = new Context<>();
 
 		Theater t = new Theater("");
 		String theaterName = "";
@@ -73,30 +82,36 @@ public class MovieBooking {
 				return;
 			}
 			switch (mainMenu) {
-			case "1" -> User.signUp(sc, account);
+
+			case "1" -> {
+				User.signUp(sc, reservContext);
+				break;
+			}
 
 			// 영화별 예매
-			case "2" -> {
-				// 영화 선택
-				movieName = m.selectMovie(sc, movie, theaterName);
-				// 극장 선택
-				Theater.selectTheaterTime(sc, theater, movieName);
-				// 날짜 선택
-				Movie.selectDate(sc, theater, movie);
+// 			case "2" -> {
+// 				// 영화 선택
+// 				movieName = m.selectMovie(sc, reservContext, theaterName);
+// //				Movie.selectMovieByTheater(sc, movie, theaterName);
+// 				// 극장 선택
+// 				Theater.selectTheaterTime(sc, reservContext, movieName);
+// 				// 날짜 선택
+// 				Movie.selectDate(sc, reservContext, movie);
+// 				break;
 
-				// 좌석 선택
+// 			}
+// 			// 극장별 예매
+// 			case "3" -> {
+// 				// 극장 선택
+// 				theaterName = t.selectTheater(sc, theater);
+// 				// 영화 선택
+// 				movieName = m.selectMovie(sc, movie, theaterName);
 
-			}
+// 				// 날짜 선택
+// 				Movie.selectDate(sc, theater, movie);
+// 				break;
 
-			// 극장별 예매
-			case "3" -> {
-				// 극장 선택
-				theaterName = t.selectTheater(sc, theater);
-				// 영화 선택
-				movieName = m.selectMovie(sc, movie, theaterName);
-				// 날짜 선택
-				Movie.selectDate(sc, theater, movie);
-			}
+// 			}
 
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
