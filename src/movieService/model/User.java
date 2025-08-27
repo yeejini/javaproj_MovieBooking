@@ -5,6 +5,7 @@ import java.util.Scanner;
 
 
 import movieService.controller.Context;
+import movieService.controller.LoginSession;
 import movieService.controller.Reservation;
 
 public class User {
@@ -98,6 +99,8 @@ public class User {
 
 					if (user.getPw() == inputPw) {
 						System.out.println(user.getName() + "님 로그인 성공!");
+						//외부에서 고유 id값 key로 전달받아 사용하기 위함
+						LoginSession.setCurrentId(inputId); //로그인 완료 시 그 id값 로그인세션에 저장
 						break;
 					} else {
 						System.out.println("비밀번호가 일치하지 않습니다.");

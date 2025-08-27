@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import movieService.controller.Context;
+import movieService.controller.LoginSession;
 import movieService.controller.Reservation;
 import movieService.data.MovieSchedule;
 
@@ -12,6 +13,8 @@ public class Movie {
 	private String date;
 
 	ArrayList<MovieSchedule> ms = new ArrayList<>();
+	//로그인 세션에 임시저장된 id값 가져옴
+	String keyId = LoginSession.getCurrentId();
 
 	// 생성자
 	public Movie() {
@@ -70,14 +73,15 @@ public class Movie {
 		String selectedMovie = movieList.get(choice - 1); // 선택된 영화 제목
 
 		found = false;
+	
 
 		// MovieSchedule에서 선택된 영화와 일치하는지 확인
 		for (MovieSchedule schedule : MovieSchedule.movieS) {
 			if (schedule.getTitle().equals(selectedMovie)) {
 				// 선택한 영화 정보로 Movie 객체 생성
 				Movie sMovie = new Movie(selectedMovie, "");
-				// context에 저장
-				// reservContext.getData().put("NoDateSelectMovie", sMovie);
+				// context에 저장 (날짜 선택 전)
+				reservContext.getData().get(keyId).setMovie(sMovie);
 				found = true;
 				System.out.println("선택된 영화: " + selectedMovie);
 				return selectedMovie; // 실제 영화 제목 반환
@@ -94,16 +98,17 @@ public class Movie {
 	}
 
 	// 영화 선택 후에만 날짜 선택 받을 수 있다.
-	public static void selectDate(Scanner sc, Context<Theater> theaterContext, Context<Movie> movieContext) {
-
-		// Context에서 "selectMovie" Key로 저장된 Movie 객체 가져오기
-		Movie movie = movieContext.getData().get("NoDateSelectMovie");
+	public static void selectDate(Scanner sc, Context<Reservation> reservContext) {
+		//로그인 세션에 임시저장된 id값 가져옴
+		String keyId = LoginSession.getCurrentId();
+		// Context에서 Key로 저장된 Movie 객체 가져오기
+		Movie movie = reservContext.getData().get(keyId).getMovie();
 
 		String selectMovie = movie.getTitle();
 		System.out.println("선택된 영화: " + selectMovie);
 
-		// Context에서 "selectTheater" Key로 저장된 Theater 객체 가져오기
-		Theater theater = theaterContext.getData().get("selectTheater");
+		// Context에서 Key로 저장된 Theater 객체 가져오기
+		Theater theater = reservContext.getData().get(keyId).getTheater();
 
 		String selectTheater = theater.getTheaterName();
 		System.out.println("선택된 극장: " + selectTheater);
@@ -126,8 +131,9 @@ public class Movie {
 
 		// 선택한 영화 정보로 Movie 객체 생성
 		Movie sMovie = new Movie(selectMovie, selectDate);
-		// context에 저장
-		movieContext.getData().put("PullMovie", sMovie);
+		// context 객체에 저장 (날짜 선택 후)
+		reservContext.getData().get(keyId).setMovie(sMovie);
+		
 		System.out.println("선택된 날짜: " + selectDate);
 
 		if (selectDate == null || selectDate == "") {
