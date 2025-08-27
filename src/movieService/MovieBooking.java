@@ -19,6 +19,9 @@ public class MovieBooking {
 
   		Context<Reservation> reservContext = new Context<>();
 
+		Context<Integer[][]> seatContext = new Context<>();
+				Seat seatManager = new Seat(seatContext);
+
 
 		String loginMsg = """
 				영화관에 오신 것을 환영합니다 !
@@ -100,12 +103,23 @@ public class MovieBooking {
 				//시간 선택
 				Reservation.selectTime(sc, reservContext);
 				//인원수 입력
+				while (true) {
 				int peopleNum = Reservation.inputPeople(sc);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
+				
+				int seatnum = seatManager.getRemainingSeats(mainMenu);
+				int result = seatnum - peopleNum;
+				if(result<0){
+					System.out.println("남은 좌석이 없습니다.");
+					continue;
+				}else{
 				//자리 선택
-
+				seatManager.selectSeat(sc, reservContext);
 				//결제
 				Reservation.submitPayment(sc, reservContext);
+				break;
+				}
+				}
 				break;
 
 			}
@@ -119,25 +133,25 @@ public class MovieBooking {
 				// 날짜 선택
 				Movie.selectDate(sc, reservContext);
 
-
-				/*seat 추가 */
-				Context<Integer[][]> seatContext = new Context<>();
-				Seat seatManager = new Seat(seatContext);
-				seatManager.selectSeat(sc, reservContext);
-				/* */
-
-
 				//시간 선택
 				Reservation.selectTime(sc, reservContext);
 				//인원수 입력
+				while (true) {
 				int peopleNum = Reservation.inputPeople(sc);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
-				
+				int seatnum = seatManager.getRemainingSeats(mainMenu);
+				int result = seatnum - peopleNum;
+				if(result<0){
+					System.out.println("남은 좌석이 없습니다.");
+					continue;
+				}else{
 				//자리 선택
-
+				seatManager.selectSeat(sc, reservContext);
 				//결제
 				Reservation.submitPayment(sc, reservContext);
-
+				break;
+				}
+				}
 				break;
 
 			}

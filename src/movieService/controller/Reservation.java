@@ -13,8 +13,6 @@ public class Reservation {
     private User user;
     private Movie movie;
     private Theater theater;
-    private Seat seat;
-
     private String date;
     private String time;
     private int people;
@@ -95,6 +93,7 @@ public class Reservation {
     public void setSeat(String seat) {
        this.selectedSeat = seat;
     }
+    
 
     public static void selectTime(Scanner sc, Context<Reservation> reservContext){
         //로그인 세션에 임시저장된 id값 가져옴
@@ -142,12 +141,18 @@ public class Reservation {
 
     public static int inputPeople(Scanner sc){
         //인원 수 입력
-        System.out.println("인원 수를 입력하세요. (숫자로만 입력 가능합니다.)>");
-        int peopleNum = sc.nextInt();
-        sc.nextLine();
-        pNum = peopleNum;
-
-        return peopleNum;
+        while(true){
+            System.out.println("인원 수를 입력하세요. (숫자로 4명까지만 입력 가능합니다.)");
+            int peopleNum = sc.nextInt();
+            sc.nextLine();
+            pNum = peopleNum;
+            if(peopleNum>4){
+            System.out.println("4명 이하로 설정해야합니다.");
+            continue;
+        }else{
+             return peopleNum;
+        }
+        }
     }
     
 
@@ -159,10 +164,11 @@ public class Reservation {
 
         while (true) {
             System.out.println("1. 예");
-        System.out.println("2. 아니오");
+            System.out.println("2. 아니오");
 
             String input = sc.nextLine().trim(); // 입력 한 번만 받음
             int n;
+
 
             try {
                 n = Integer.parseInt(input);
@@ -200,6 +206,7 @@ public class Reservation {
         String movie = r.getMovie().getTitle();
         String date = r.getMovie().getDate();
         String time = r.getTime();
+        String seat = r.getSeat();
         //좌석 정보
 
         String reservInfo = """
@@ -211,9 +218,9 @@ public class Reservation {
             날짜   : %s
             시간   : %s
             인원 수 : %d
-            좌석번호: 
+            좌석번호: %s
 
-                """.formatted(name, name,theater,movie,date,time,pNum);
+                """.formatted(name, name,theater,movie,date,time,pNum,seat);
 
         return reservInfo;
     }
