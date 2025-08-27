@@ -5,6 +5,7 @@ import java.util.Scanner;
 import movieService.controller.Context;
 import movieService.controller.Reservation;
 import movieService.model.Movie;
+import movieService.model.Seat;
 import movieService.model.Theater;
 import movieService.model.User;
 
@@ -65,6 +66,7 @@ public class MovieDemo {
 
 				// 날짜 선택
 				Movie.selectDate(sc, reservContext);
+
 				break;
 
 			}

@@ -1,7 +1,6 @@
 package movieService.controller;
 
 import movieService.model.Movie;
-import movieService.model.Seat;
 import movieService.model.Theater;
 import movieService.model.User;
 
@@ -12,7 +11,7 @@ public class Reservation {
     private String date;
     private String time;
     private int people;
-    private Seat seat;
+    private String selectedSeat;
     private String keyId;
 
 
@@ -79,12 +78,12 @@ public class Reservation {
         this.people = people;
     }
 
-    public Seat getSeat() {
-        return seat;
+    public String getSeat() {
+        return selectedSeat;
     }
 
-    public void setSeat(Seat seat) {
-        this.seat = seat;
+    public void setSeat(String seat) {
+       this.selectedSeat = seat;
     }
     
 }
