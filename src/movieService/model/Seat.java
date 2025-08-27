@@ -2,6 +2,7 @@ package movieService.model;
 
 import java.util.Scanner;
 
+
 import movieService.controller.Context;
 import movieService.controller.LoginSession;
 import movieService.controller.Reservation;

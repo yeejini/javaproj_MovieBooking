@@ -24,14 +24,14 @@ public class MovieBooking {
 				영화관에 오신 것을 환영합니다 !
 				<먼저 회원가입과 로그인을 완료해주세요>
 				-------------------------------
-				  1. 회원가입 | 2. 로그인 | 3. 종료
+				  1. 회원가입 | 2. 로그인 | 3. 취소
 				-------------------------------
 				선택>
 				""";
 
 		String menuMsg = """
 				---------------------------------------------
-				  1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 종료
+				  1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 예매취소
 				---------------------------------------------
 				선택>
 				""";
@@ -82,24 +82,33 @@ public class MovieBooking {
 				return;
 			}
 			switch (mainMenu) {
-
 			case "1" -> {
-				User.signUp(sc, reservContext);
+				String ticketInfo = Reservation.issueTicket(sc, reservContext);
+				System.out.println(ticketInfo);
 				break;
 			}
 
 			// 영화별 예매
-// 			case "2" -> {
-// 				// 영화 선택
-// 				movieName = m.selectMovie(sc, reservContext, theaterName);
-// //				Movie.selectMovieByTheater(sc, movie, theaterName);
-// 				// 극장 선택
-// 				Theater.selectTheaterTime(sc, reservContext, movieName);
-// 				// 날짜 선택
-// 				Movie.selectDate(sc, reservContext, movie);
-// 				break;
+			case "2" -> {
+				// 영화 선택
+				movieName = m.selectMovie(sc, reservContext, theaterName);
+//				Movie.selectMovieByTheater(sc, movie, theaterName);
+				// 극장 선택
+				Theater.selectTheaterTime(sc, reservContext, movieName);
+				// 날짜 선택
+				Movie.selectDate(sc, reservContext);
+				//시간 선택
+				Reservation.selectTime(sc, reservContext);
+				//인원수 입력
+				int peopleNum = Reservation.inputPeople(sc);
+				System.out.println("입렵된 인원 수 : "+ peopleNum);
+				//자리 선택
 
-// 			}
+				//결제
+				Reservation.submitPayment(sc, reservContext);
+				break;
+
+			}
 			// 극장별 예매
 			case "3" -> {
 				// 극장 선택
@@ -110,16 +119,30 @@ public class MovieBooking {
 				// 날짜 선택
 				Movie.selectDate(sc, reservContext);
 
+
 				/*seat 추가 */
 				Context<Integer[][]> seatContext = new Context<>();
 				Seat seatManager = new Seat(seatContext);
 				seatManager.selectSeat(sc, reservContext);
 				/* */
 
+
+				//시간 선택
+				Reservation.selectTime(sc, reservContext);
+				//인원수 입력
+				int peopleNum = Reservation.inputPeople(sc);
+				System.out.println("입렵된 인원 수 : "+ peopleNum);
+				
+				//자리 선택
+
+				//결제
+				Reservation.submitPayment(sc, reservContext);
+
 				break;
 
 			}
 
+			
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
