@@ -36,37 +36,38 @@ public class Theater {
 	}
 
 	// 극장 선택 메서드
-	public String selectTheater(Scanner sc, Context<Reservation> reservContext) {
-		// 극장선택 후 영화로 넘어가는 로직
+public String selectTheater(Scanner sc, Context<Reservation> reservContext) {
+    // 무비스케줄 스트림 선언 + 중복 제거
+    List<String> theaterOption = MovieSchedule.movieS.stream()
+                                        .map(MovieSchedule::getTheaterName)
+                                        .distinct() // 중복 제거
+                                        .collect(Collectors.toList());
 
-		// 무비스케줄 스트림 선언
-		Stream<MovieSchedule> ms = MovieSchedule.movieS.stream();
-		List<String> theaterOption = ms.map(MovieSchedule::getTheaterName).collect(Collectors.toList());
+    // 극장 목록 출력 후 선택
+    for (int i = 0; i < theaterOption.size(); i++) {
+        System.out.println((i + 1) + ". " + theaterOption.get(i));
+    }
 
-		// 극장 목록 출력 후 선택
-		for (int i = 0; i < theaterOption.size(); i++) {
-			System.out.println((i + 1) + ". " + theaterOption.get(i));
-		}
-		System.out.println("\n극장을 선택하세요 : ");
-		int inputTheater = Integer.parseInt(sc.nextLine());
+    System.out.println("\n극장을 선택하세요 : ");
+    int inputTheater = Integer.parseInt(sc.nextLine());
 
-		// 입력받은 값 저장
-		String selectTheater = theaterOption.get(inputTheater - 1);
-		Theater sTheater = new Theater(selectTheater);
-		//로그인 세션에 임시저장된 id값 가져옴
-		String keyId = LoginSession.getCurrentId();
-		//해당 id가 key로 저장되어 있는 reservContxt객체 가져와서 극장명이 담긴 극장객체 저장
-		reservContext.getData().get(keyId).setTheater(sTheater);
-		
+    // 입력받은 값 저장
+    String selectTheater = theaterOption.get(inputTheater - 1);
+    Theater sTheater = new Theater(selectTheater);
 
+    // 로그인 세션에 임시저장된 id값 가져옴
+    String keyId = LoginSession.getCurrentId();
 
-		// 방금 선택한 Theater 객체 출력
-		Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
-		System.out.println("저장된 극장: " + retrievedTheater.toString());
+    // 해당 id가 key로 저장되어 있는 reservContext 객체 가져와서 극장명이 담긴 극장 객체 저장
+    reservContext.getData().get(keyId).setTheater(sTheater);
 
-		return retrievedTheater.toString();
+    // 방금 선택한 Theater 객체 출력
+    Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
+    // System.out.println("저장된 극장: " + retrievedTheater.toString());
 
-	}
+    return retrievedTheater.toString();
+}
+
 
 	public static void selectTheaterTime(Scanner sc, Context<Reservation> reservContext, String movieName) {
 		// 극장선택 후 시간선택으로 넘어가는 로직
@@ -75,6 +76,7 @@ public class Theater {
 		// title에 맞는 극장 get.TheaterName을 받아옴
 		Stream<MovieSchedule> ms = MovieSchedule.movieS.stream();
 		List<String> theaterOption = ms.filter(n -> n.getTitle().equals(movieName)).map(MovieSchedule::getTheaterName)
+		.distinct() // 중복 제거
 				.collect(Collectors.toList());
 
 		// 목록 출력 후 선택
@@ -96,7 +98,7 @@ public class Theater {
 		// 저장된 값 출력
 		// 방금 선택한 Theater 객체 출력
 		Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
-		System.out.println("저장된 극장: " + retrievedTheater.toString());
+		// System.out.println("저장된 극장: " + retrievedTheater.toString());
 
 	}
 

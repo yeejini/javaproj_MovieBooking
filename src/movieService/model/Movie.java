@@ -1,6 +1,7 @@
 package movieService.model;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Scanner;
 
 import movieService.controller.Context;
@@ -46,25 +47,23 @@ public class Movie {
 		boolean found = false;
 		int idx = 1;
 		ArrayList<String> movieList = new ArrayList<>();
+		HashSet<String> addedMovies = new HashSet<>(); // 중복 체크용
 
 //		Theater theater = new Theater(theaterName);
 		System.out.println("선택된 극장" + theaterName);
 
 		for (MovieSchedule schedule : MovieSchedule.movieS) {
-			if (theaterName == null || theaterName.isEmpty()) {
-				// theaterName이 없으면 모든 영화 제목 출력
-				System.out.println(idx + ". " + schedule.getTitle());
-				movieList.add(schedule.getTitle());
-				idx++;
-			} else if (schedule.getTheaterName().equals(theaterName)) {
-//				System.out.println(schedule.getTheaterName().equals(theaterName));
-
-				// theaterName이 존재하면 해당 극장에서 상영하는 영화만 출력
-				System.out.println(idx + ". " + schedule.getTitle());
-				movieList.add(schedule.getTitle());
-				idx++;
-			}
-		}
+        // 극장을 선택했는지 여부에 따라 필터링
+        if (theaterName == null || theaterName.isEmpty() || schedule.getTheaterName().equals(theaterName)) {
+            // 이미 추가한 영화면 건너뜀
+            if (!addedMovies.contains(schedule.getTitle()) ) {
+                System.out.println(idx + ". " + schedule.getTitle());
+                movieList.add(schedule.getTitle());
+                addedMovies.add(schedule.getTitle());
+                idx++;
+            }
+        }
+    }
 		System.out.println(); // 마지막에 줄바꿈
 
 		// 영화 선택
@@ -72,7 +71,6 @@ public class Movie {
 		int choice = Integer.parseInt(sc.nextLine());
 		String selectedMovie = movieList.get(choice - 1); // 선택된 영화 제목
 
-		found = false;
 	
 
 		// MovieSchedule에서 선택된 영화와 일치하는지 확인
@@ -83,7 +81,7 @@ public class Movie {
 				// context에 저장 (날짜 선택 전)
 				reservContext.getData().get(keyId).setMovie(sMovie);
 				found = true;
-				System.out.println("선택된 영화: " + selectedMovie);
+				// System.out.println("선택된 영화: " + selectedMovie);
 				return selectedMovie; // 실제 영화 제목 반환
 			}
 		}
@@ -115,15 +113,20 @@ public class Movie {
 
 		int idx = 1;
 		ArrayList<String> movieList = new ArrayList<>();
+		HashSet<String> addedDate = new HashSet<>(); // 중복 체크용
 
 		// MovieSchedule에서 선택된 영화와 극장 일치하는 날짜 리스트만 출력
-		for (MovieSchedule schedule : MovieSchedule.movieS) {
-			if (schedule.getTitle().equals(selectMovie) && schedule.getTheaterName().equals(selectTheater)) {
-				System.out.println(idx + ". " + schedule.getDate());
-				movieList.add(schedule.getDate());
-				idx++;
-			}
-		}
+for (MovieSchedule schedule : MovieSchedule.movieS) {
+    if (schedule.getTitle().equals(selectMovie) && schedule.getTheaterName().equals(selectTheater)) {
+        String date = schedule.getDate();
+        if (!addedDate.contains(date)) {
+            System.out.println(idx + ". " + date);
+            movieList.add(date);
+            addedDate.add(date); // 중복 체크 후 리스트에 추가
+            idx++;
+        }
+    }
+}
 
 		System.out.println("날짜를 선택하세요>");
 		int choice = Integer.parseInt(sc.nextLine());
