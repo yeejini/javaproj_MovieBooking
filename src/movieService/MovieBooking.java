@@ -19,6 +19,7 @@ public class MovieBooking {
 
   		Context<Reservation> reservContext = new Context<>();
 
+
 		Context<Integer[][]> seatContext = new Context<>();
 				Seat seatManager = new Seat(seatContext);
 
@@ -26,6 +27,9 @@ public class MovieBooking {
 		String loginMsg = """
 				영화관에 오신 것을 환영합니다 !
 				<먼저 회원가입과 로그인을 완료해주세요>
+				""";
+
+		String loginMsg = """
 				-------------------------------
 				  1. 회원가입 | 2. 로그인 | 3. 취소
 				-------------------------------
@@ -34,12 +38,15 @@ public class MovieBooking {
 
 		String menuMsg = """
 				---------------------------------------------
-				  1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 예매취소
+				  1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 취소
 				---------------------------------------------
 				선택>
 				""";
 
 		Scanner sc = new Scanner(System.in);
+
+		//welcom 메세지 출력
+		System.out.println(welcomMsg);
 
 		boolean run = true;
 
@@ -56,6 +63,7 @@ public class MovieBooking {
 
 			case "1" -> {
 				User.signUp(sc, reservContext);
+				System.out.println("<예매를 위해서 로그인을 먼저 진행해주세요.>");
 				break;
 			}
 

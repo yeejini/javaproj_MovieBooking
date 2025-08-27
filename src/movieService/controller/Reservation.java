@@ -1,6 +1,7 @@
 package movieService.controller;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Scanner;
 
 import movieService.data.MovieSchedule;
@@ -13,6 +14,7 @@ public class Reservation {
     private User user;
     private Movie movie;
     private Theater theater;
+
     private String date;
     private String time;
     private int people;
@@ -108,6 +110,7 @@ public class Reservation {
 
         int idx = 1;
 		ArrayList<String> TimeSeatList = new ArrayList<>();
+        HashSet<String> addedTime = new HashSet<>(); // 중복 체크용
 
         System.out.println("\n시간을 선택하세요.");
 
@@ -115,12 +118,16 @@ public class Reservation {
         //매칭된 MovieSchedule의 시간+좌석 정보 출력
 		for (MovieSchedule schedule : MovieSchedule.movieS) {
 			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater) && schedule.getDate().equals(date)) {
-				//시간 리스트
+                // 이미 추가한 시간이면 건너뜀
+            if (!addedTime.contains(schedule.getTime()) ) {
+                //시간 리스트
                 System.out.println(idx + ". " + schedule.getTime());
                 //좌석 리스트
 
 				TimeSeatList.add(schedule.getTime());
 				idx++;
+            }
+				
 			}
 		}
 
@@ -157,6 +164,8 @@ public class Reservation {
     
 
     public static void submitPayment(Scanner sc, Context<Reservation> reservContext){
+        //로그인 세션에 임시저장된 id값 가져옴
+		String keyId = LoginSession.getCurrentId();
 
         System.out.println(Reservation.issueTicket(sc, reservContext));
 
@@ -179,6 +188,18 @@ public class Reservation {
 
             if (n == 2) {
                 System.out.println("예매가 취소되었습니다. 안녕히가세요.");
+                // Reservation 객체 가져오기
+                Reservation r = reservContext.getData().get(keyId);
+
+                if (r != null) {
+                    r.setUser(null);
+                    r.setMovie(null);
+                    r.setTheater(null);
+                    r.setDate(null);
+                    r.setTime(null);
+                    r.setPeople(0);
+                    r.setSeat(null);
+                }
                 break;
             } else if (n == 1) {
                 System.out.println("예매가 완료되었습니다. 안녕히가세요.");
@@ -206,7 +227,23 @@ public class Reservation {
         String movie = r.getMovie().getTitle();
         String date = r.getMovie().getDate();
         String time = r.getTime();
+
         String seat = r.getSeat();
+
+
+         // MovieSchedule 리스트에서 매칭되는 schedule 찾기
+        String screen = ""; // 기본값
+        for (MovieSchedule schedule : MovieSchedule.movieS) {
+        if (schedule.getTitle().equals(movie) &&
+            schedule.getTheaterName().equals(theater) &&
+            schedule.getDate().equals(date) &&
+            schedule.getTime().equals(time)) {
+            screen = schedule.getScreen(); // 상영관 정보 가져오기
+            break;
+        }
+    }
+        
+
         //좌석 정보
 
         String reservInfo = """
@@ -215,12 +252,16 @@ public class Reservation {
             예약자 : %s
             극장명 : %s
             영화명 : %s
+            상영관 : %s
             날짜   : %s
             시간   : %s
             인원 수 : %d
             좌석번호: %s
 
-                """.formatted(name, name,theater,movie,date,time,pNum,seat);
+
+                """.formatted(name, name,theater,movie,screen,date,time,pNum,seat);
+
+
 
         return reservInfo;
     }
