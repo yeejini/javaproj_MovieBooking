@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import movieService.controller.Context;
+import movieService.controller.Reservation;
 import movieService.data.MovieSchedule;
 
 public class Movie {
@@ -38,7 +39,7 @@ public class Movie {
 		this.date = date;
 	}
 
-	public String selectMovie(Scanner sc, Context<Movie> context, String theaterName) {
+	public String selectMovie(Scanner sc, Context<Reservation> reservContext, String theaterName) {
 		boolean found = false;
 		int idx = 1;
 		ArrayList<String> movieList = new ArrayList<>();
@@ -76,7 +77,7 @@ public class Movie {
 				// 선택한 영화 정보로 Movie 객체 생성
 				Movie sMovie = new Movie(selectedMovie, "");
 				// context에 저장
-				context.getData().put("NoDateSelectMovie", sMovie);
+				// reservContext.getData().put("NoDateSelectMovie", sMovie);
 				found = true;
 				System.out.println("선택된 영화: " + selectedMovie);
 				return selectedMovie; // 실제 영화 제목 반환
