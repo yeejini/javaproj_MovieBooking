@@ -17,12 +17,21 @@ public class Seat {
 	}
 	public void setSelectedSeat(String seat) {
 			this.selectedSeat = seat;
-		}
+	}
 
-		public String getSelectedSeat() {
+	public String getSelectedSeat() {
 			return selectedSeat;
-		}
+	}
+	private boolean paymentResult;
 
+	public void setPaymentResult(boolean result) {
+		this.paymentResult = result;
+	}
+
+	public boolean getPaymentResult() {
+		return paymentResult;
+	}
+		//좌석 출력 메서드
 	  private void printSeats(String key, Integer[][] seats) {
 
 			System.out.println("\n" + key);
@@ -55,7 +64,7 @@ public class Seat {
 
 		System.out.println("\n------------------------------------------");
 	}
-
+	//좌석 선택 메서드
 	public void selectSeat(Scanner sc, Context<Reservation> reservContext) {
 		//* 로그인세션에서 아이디 값 받아오기 -> 그 아이디값을 리졀베이션에 넣어서 선택한 영화,극장,시간 꺼내옴*/
 		String keyId = LoginSession.getCurrentId();
@@ -73,6 +82,7 @@ public class Seat {
             context.getData().put(key, seats);
         }
 		printSeats(key, seats);
+		int peonum=reserv.getPeople();
 		
 		String strCol; // 입력받은 행이름
 		char charCol;// 선택한 행을 char로 바꿀때 사용
@@ -81,7 +91,11 @@ public class Seat {
 		String selectedSeat = ""; // 선택된 좌석번호
 
 		// *****좌석 선택****** start
-		while (true) {
+		for(int i =0; i<peonum; i++){
+			if(peonum!=1){
+				System.out.println("\n"+(i+1)+"번째 좌석선택");
+			}
+			while (true) {
 			System.out.println("예약하실 좌석의 행을 입력하세요(A~E) : ");
 			strCol = sc.nextLine();
 			// 공백제거 후 첫번재 글자만 뽑아서 캐릭터로 전환 , A1이렇게 입력할수도 있으니까
@@ -113,6 +127,8 @@ public class Seat {
 					System.out.println("이미 예약된 좌석입니다.");
 				}
 			}
+		}
+		
 	}
 
 	//남은좌석 출력하는 메서드 
@@ -128,5 +144,5 @@ public class Seat {
 		}
 
 		//아니요 하면 선택한 좌석 다시 빈좌석으로 출력하는 부분
-		//인원수 만큼 입력받아야하는ㄴ 부분
+		//인원수만큼 좌석 출력
 }
