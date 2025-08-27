@@ -6,6 +6,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import movieService.controller.Context;
+import movieService.controller.LoginSession;
+import movieService.controller.Reservation;
 import movieService.data.MovieSchedule;
 
 public class Theater {
@@ -34,7 +36,7 @@ public class Theater {
 	}
 
 	// 극장 선택 메서드
-	public String selectTheater(Scanner sc, Context<Theater> context) {
+	public String selectTheater(Scanner sc, Context<Reservation> reservContext) {
 		// 극장선택 후 영화로 넘어가는 로직
 
 		// 무비스케줄 스트림 선언
@@ -50,13 +52,17 @@ public class Theater {
 
 		// 입력받은 값 저장
 		String selectTheater = theaterOption.get(inputTheater - 1);
-//		Theater theater = new Theater(selectedTheater);
-//		System.out.println(theater.theaterName);
 		Theater sTheater = new Theater(selectTheater);
-		context.getData().put("selectTheater", sTheater);
+		//로그인 세션에 임시저장된 id값 가져옴
+		String keyId = LoginSession.getCurrentId();
+		//해당 id가 key로 저장되어 있는 reservContxt객체 가져와서 극장명이 담긴 극장객체 저장
+		reservContext.getData().get(keyId).setTheater(sTheater);
+		System.out.println(reservContext.getData().get(keyId).getTheater());
+		
 
-		// 저장된 값 출력
-		Theater retrievedTheater = context.getData().get("selectTheater");
+
+		// 방금 선택한 Theater 객체 출력
+		Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
 		System.out.println("저장된 극장: " + retrievedTheater.toString());
 
 		return retrievedTheater.toString();

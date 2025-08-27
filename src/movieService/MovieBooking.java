@@ -15,7 +15,9 @@ public class MovieBooking {
 	public static void main(String[] args) {
 		ArrayList<MovieSchedule> ms = new ArrayList<>();
 
-		Context<Reservation> reservContext = new Context<>();
+
+  		Context<Reservation> reservContext = new Context<>();
+
 
 		String loginMsg = """
 				영화관에 오신 것을 환영합니다 !
@@ -97,18 +99,18 @@ public class MovieBooking {
 // 				break;
 
 // 			}
-// 			// 극장별 예매
-// 			case "3" -> {
-// 				// 극장 선택
-// 				theaterName = t.selectTheater(sc, theater);
-// 				// 영화 선택
-// 				movieName = m.selectMovie(sc, movie, theaterName);
+			// 극장별 예매
+			case "3" -> {
+				// 극장 선택
+				theaterName = t.selectTheater(sc, reservContext);
+				// 영화 선택
+				movieName = m.selectMovie(sc, reservContext, theaterName);
 
-// 				// 날짜 선택
-// 				Movie.selectDate(sc, theater, movie);
-// 				break;
+				// 날짜 선택
+				Movie.selectDate(sc, reservContext);
+				break;
 
-// 			}
+			}
 
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
