@@ -24,7 +24,7 @@ public class MovieBooking {
 				Seat seatManager = new Seat(seatContext);
 
 
-		String loginMsg = """
+		String welcomMsg = """
 				영화관에 오신 것을 환영합니다 !
 				<먼저 회원가입과 로그인을 완료해주세요>
 				""";
