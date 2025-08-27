@@ -1,18 +1,25 @@
 package movieService.controller;
 
+import java.util.ArrayList;
+import java.util.Scanner;
+
+import movieService.data.MovieSchedule;
 import movieService.model.Movie;
 import movieService.model.Seat;
 import movieService.model.Theater;
 import movieService.model.User;
 
 public class Reservation {
+    //객체 타압
     private User user;
     private Movie movie;
     private Theater theater;
+    private Seat seat;
+
     private String date;
     private String time;
     private int people;
-    private Seat seat;
+
     private String keyId;
 
 
@@ -86,5 +93,133 @@ public class Reservation {
     public void setSeat(Seat seat) {
         this.seat = seat;
     }
+
+    public static void selectTime(Scanner sc, Context<Reservation> reservContext){
+        //로그인 세션에 임시저장된 id값 가져옴
+		String keyId = LoginSession.getCurrentId();
+
+        //시간+남은 좌석 리스트 출력
+        //앞에서 진행한 reservation객체의 정보 가져오기(극장명, 영화명, 날짜)
+        Reservation r = reservContext.getData().get(keyId);
+        String theater = r.getTheater().getTheaterName();
+        String movie = r.getMovie().getTitle();
+        String date = r.getMovie().getDate();
+
+        int idx = 1;
+		ArrayList<String> TimeSeatList = new ArrayList<>();
+
+        System.out.println("\n시간을 선택하세요.");
+
+         //사용자가 선택한 극장,영화,날짜와 MovieSchedule리스트에 존재하는 것과 매칭시켜 
+        //매칭된 MovieSchedule의 시간+좌석 정보 출력
+		for (MovieSchedule schedule : MovieSchedule.movieS) {
+			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater) && schedule.getDate().equals(date)) {
+				//시간 리스트
+                System.out.println(idx + ". " + schedule.getTime());
+                //좌석 리스트
+
+				TimeSeatList.add(schedule.getTime());
+				idx++;
+			}
+		}
+
+        //시간 선택
+        System.out.println("선택>");
+        int choice = Integer.parseInt(sc.nextLine());
+		String selectTime = TimeSeatList.get(choice - 1); // 선택된 날짜
+        r.setTime(selectTime);
+        //선택된 시간과 좌석 출력
+        System.out.println("선택된 시간: " + selectTime);
+
+        //좌석 출력
+        System.out.println("선택된 좌석: ");
+
+    }
+
+    static int pNum;
+
+    public static int inputPeople(Scanner sc){
+        //인원 수 입력
+        System.out.println("인원 수를 입력하세요. (숫자로만 입력 가능합니다.)>");
+        int peopleNum = sc.nextInt();
+        sc.nextLine();
+        pNum = peopleNum;
+
+        return peopleNum;
+    }
     
-}
+
+    public static void submitPayment(Scanner sc, Context<Reservation> reservContext){
+
+        System.out.println(Reservation.issueTicket(sc, reservContext));
+
+        System.out.println("예매하시겠습니다?");
+
+        while (true) {
+            System.out.println("1. 예");
+        System.out.println("2. 아니오");
+
+            String input = sc.nextLine().trim(); // 입력 한 번만 받음
+            int n;
+
+            try {
+                n = Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("\n숫자를 입력하세요>");
+                continue; // 다시 while문 처음으로
+            }
+
+            if (n == 2) {
+                System.out.println("예매가 취소되었습니다. 안녕히가세요.");
+                break;
+            } else if (n == 1) {
+                System.out.println("예매가 완료되었습니다. 안녕히가세요.");
+                break;
+            } else {
+                System.out.println("번호를 잘못 입력하셨습니다. 다시 입력하세요>");
+            }
+        }
+        
+    }
+
+    public static String issueTicket(Scanner sc, Context<Reservation> reservContext){
+
+        //로그인 세션에 임시저장된 id값 가져옴
+		String keyId = LoginSession.getCurrentId();
+        Reservation r = reservContext.getData().get(keyId);
+
+         // Reservation 객체나 필드가 null인지 체크
+        if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
+            return "티켓 정보가 없습니다.";
+        }
+
+        String name = r.getUser().getName();
+        String theater = r.getTheater().getTheaterName();
+        String movie = r.getMovie().getTitle();
+        String date = r.getMovie().getDate();
+        String time = r.getTime();
+        //좌석 정보
+
+        String reservInfo = """
+                <%s 님의 예약 정보입니다.>
+            -------------------------------
+            예약자 : %s
+            극장명 : %s
+            영화명 : %s
+            날짜   : %s
+            시간   : %s
+            인원 수 : %d
+            좌석번호: 
+
+                """.formatted(name, name,theater,movie,date,time,pNum);
+
+        return reservInfo;
+    }
+
+      
+        
+        
+        
+    }
+    
+
