@@ -5,12 +5,11 @@ import java.util.Scanner;
 
 import movieService.data.MovieSchedule;
 import movieService.model.Movie;
-import movieService.model.Seat;
 import movieService.model.Theater;
 import movieService.model.User;
 
 public class Reservation {
-    //객체 타압
+    //객체 타입
     private User user;
     private Movie movie;
     private Theater theater;
@@ -19,6 +18,9 @@ public class Reservation {
     private String date;
     private String time;
     private int people;
+
+    private String selectedSeat;
+
 
     private String keyId;
 
@@ -86,12 +88,12 @@ public class Reservation {
         this.people = people;
     }
 
-    public Seat getSeat() {
-        return seat;
+    public String getSeat() {
+        return selectedSeat;
     }
 
-    public void setSeat(Seat seat) {
-        this.seat = seat;
+    public void setSeat(String seat) {
+       this.selectedSeat = seat;
     }
 
     public static void selectTime(Scanner sc, Context<Reservation> reservContext){

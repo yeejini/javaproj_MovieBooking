@@ -7,6 +7,7 @@ import movieService.controller.Context;
 import movieService.controller.Reservation;
 import movieService.data.MovieSchedule;
 import movieService.model.Movie;
+import movieService.model.Seat;
 import movieService.model.Theater;
 import movieService.model.User;
 
@@ -117,6 +118,15 @@ public class MovieBooking {
 
 				// 날짜 선택
 				Movie.selectDate(sc, reservContext);
+
+
+				/*seat 추가 */
+				Context<Integer[][]> seatContext = new Context<>();
+				Seat seatManager = new Seat(seatContext);
+				seatManager.selectSeat(sc, reservContext);
+				/* */
+
+
 				//시간 선택
 				Reservation.selectTime(sc, reservContext);
 				//인원수 입력
@@ -127,6 +137,7 @@ public class MovieBooking {
 
 				//결제
 				Reservation.submitPayment(sc, reservContext);
+
 				break;
 
 			}
