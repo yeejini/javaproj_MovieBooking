@@ -24,7 +24,7 @@ public class MovieBooking {
 				Seat seatManager = new Seat(seatContext);
 
 
-		String loginMsg = """
+		String welcomMsg = """
 				영화관에 오신 것을 환영합니다 !
 				<먼저 회원가입과 로그인을 완료해주세요>
 				""";
@@ -112,7 +112,7 @@ public class MovieBooking {
 				Reservation.selectTime(sc, reservContext);
 				//인원수 입력
 				while (true) {
-				int peopleNum = Reservation.inputPeople(sc);
+				int peopleNum = Reservation.inputPeople(sc,reservContext);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
 				
 				int seatnum = seatManager.getRemainingSeats(mainMenu);
@@ -145,7 +145,7 @@ public class MovieBooking {
 				Reservation.selectTime(sc, reservContext);
 				//인원수 입력
 				while (true) {
-				int peopleNum = Reservation.inputPeople(sc);
+				int peopleNum = Reservation.inputPeople(sc,reservContext);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
 				int seatnum = seatManager.getRemainingSeats(mainMenu);
 				int result = seatnum - peopleNum;
@@ -156,7 +156,9 @@ public class MovieBooking {
 				//자리 선택
 				seatManager.selectSeat(sc, reservContext);
 				//결제
-				Reservation.submitPayment(sc, reservContext);
+				 boolean responese = Reservation.submitPayment(sc, reservContext);
+				 //예매 결제 여부를 seat 객체에 전달해줌
+				 seatManager.setPaymentResult(responese);
 				break;
 				}
 				}

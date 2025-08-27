@@ -70,7 +70,7 @@ public class MovieDemo {
 				//시간 선택
 				Reservation.selectTime(sc, reservContext);
 				//인원수 입력
-				int peopleNum = Reservation.inputPeople(sc);
+				int peopleNum = Reservation.inputPeople(sc,reservContext);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
 				//자리 선택
 
@@ -92,7 +92,7 @@ public class MovieDemo {
 				//시간 선택
 				Reservation.selectTime(sc, reservContext);
 				//인원수 입력
-				int peopleNum = Reservation.inputPeople(sc);
+				int peopleNum = Reservation.inputPeople(sc,reservContext);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
 				
 				//자리 선택

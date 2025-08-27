@@ -146,8 +146,11 @@ public class Reservation {
 
     static int pNum;
 
-    public static int inputPeople(Scanner sc){
+    public static int inputPeople(Scanner sc,Context<Reservation> reservContext){
+        String keyId = LoginSession.getCurrentId();
+         Reservation r = reservContext.getData().get(keyId);
         //인원 수 입력
+
         while(true){
             System.out.println("인원 수를 입력하세요. (숫자로 4명까지만 입력 가능합니다.)");
             int peopleNum = sc.nextInt();
@@ -157,20 +160,21 @@ public class Reservation {
             System.out.println("4명 이하로 설정해야합니다.");
             continue;
         }else{
+            r.setPeople(peopleNum);
              return peopleNum;
         }
         }
     }
     
 
-    public static void submitPayment(Scanner sc, Context<Reservation> reservContext){
+    public static boolean submitPayment(Scanner sc, Context<Reservation> reservContext){
         //로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
 
         System.out.println(Reservation.issueTicket(sc, reservContext));
 
         System.out.println("예매하시겠습니다?");
-
+  boolean responese = false;
         while (true) {
             System.out.println("1. 예");
             System.out.println("2. 아니오");
@@ -178,6 +182,7 @@ public class Reservation {
             String input = sc.nextLine().trim(); // 입력 한 번만 받음
             int n;
 
+          
 
             try {
                 n = Integer.parseInt(input);
@@ -200,14 +205,17 @@ public class Reservation {
                     r.setPeople(0);
                     r.setSeat(null);
                 }
-                break;
+                responese = false;
+                return responese;
             } else if (n == 1) {
                 System.out.println("예매가 완료되었습니다. 안녕히가세요.");
+                responese =true;
                 break;
             } else {
                 System.out.println("번호를 잘못 입력하셨습니다. 다시 입력하세요>");
             }
         }
+        return responese;
         
     }
 
