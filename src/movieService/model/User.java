@@ -1,16 +1,17 @@
 package movieService.model;
 
+import java.security.Key;
 import java.util.Scanner;
 
+
 import movieService.controller.Context;
+import movieService.controller.Reservation;
 
 public class User {
 
 	private String id;
 	private String name;
 	private int pw;
-
-//   Context<User> context = new Context<>();
 
 	public User(String id, String name, int pw) {
 		this.id = id;
@@ -31,7 +32,7 @@ public class User {
 	}
 
 	// 회원가입 메서드
-	public static void signUp(Scanner sc, Context<User> account) {
+	public static void signUp(Scanner sc, Context<Reservation> reservContext) {
 		// 아이디 문자 4자리만 가능
 		// 비밀번호 숫자 4자리만
 
@@ -67,12 +68,14 @@ public class User {
 		System.out.println(name + "님, 회원가입이 완료되었습니다.");
 
 		User newUser = new User(id, name, pw);
-		account.getData().put(id, newUser);
+		String keyId = id;
+		Reservation reservation = new Reservation(keyId, newUser);
+		reservContext.getData().put(keyId, reservation);
 
 	}
 
 	// 로그인 메서드
-	public static void login(Scanner sc, Context<User> context) {
+	public static void login(Scanner sc, Context<Reservation> reservContext) {
 		System.out.println("<로그인 정보 입력>");
 
 		while (true) {
@@ -80,24 +83,28 @@ public class User {
 			String inputId = sc.nextLine();
 
 			// Map에서 해당 id에 대응되는 User 가져오기
-			User account = context.getData().get(inputId); // 여기서 실제 User 객체를 가져오는 것
-			if (account == null) {
+			Reservation reservation = reservContext.getData().get(inputId); // 여기서 실제 User 객체를 가져오는 것
+			
+			if (reservation == null) {
 				System.out.println("일치하는 id가 존재하지 않습니다.");
-				continue;
-			} else {
+				continue; //재입력
+			} 
+
+			User user = reservation.getUser(); // null 체크 후 안전하게 가져오기
+			
 				while (true) {
 					System.out.println("password를 입력하세요. : ");
 					int inputPw = Integer.parseInt(sc.nextLine());
 
-					if (account.getPw() == inputPw) {
-						System.out.println(account.getName() + "님 로그인 성공!");
+					if (user.getPw() == inputPw) {
+						System.out.println(user.getName() + "님 로그인 성공!");
 						break;
 					} else {
 						System.out.println("비밀번호가 일치하지 않습니다.");
 						continue;
 					}
 				}
-			}
+			
 			break;
 		}
 
