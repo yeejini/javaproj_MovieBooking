@@ -171,7 +171,7 @@ public class Reservation {
 
         while(true){
 
-            System.out.println("인원 수를 입력하세요. (숫자로 8명까지만 입력 가능합니다.)");
+            System.out.println("\n인원 수를 입력하세요. (숫자로 8명까지만 입력 가능합니다.)");
 
             int peopleNum = sc.nextInt();
             sc.nextLine();

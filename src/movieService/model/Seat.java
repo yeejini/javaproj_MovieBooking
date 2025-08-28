@@ -92,6 +92,9 @@ public class Seat {
 	}
 	//좌석 선택 메서드
 	public void selectSeat(Scanner sc, Context<Reservation> reservContext) {
+
+		clearSeats(); //좌석 정보 초기화 
+
 		//* 로그인세션에서 아이디 값 받아오기 -> 그 아이디값을 리졀베이션에 넣어서 선택한 영화,극장,시간 꺼내옴*/
 		String keyId = LoginSession.getCurrentId();
 		Reservation reserv =reservContext.getData().get(keyId);
@@ -117,7 +120,7 @@ public class Seat {
 		// *****좌석 선택****** start
 		for(int i =0; i<peonum; i++){ // 인원수만큼 돌리기
 			if(peonum!=1){ //한명이 아니면 설명을 위해 몇번째 좌석 선택인지 출력
-				System.out.println("\n"+(i+1)+"번째 좌석선택");
+				System.out.println("\n"+"<"+(i+1)+"번째 좌석선택>");
 			}
 			while (true) {
 			System.out.println("예약하실 좌석의 행을 입력하세요(A~E) : ");
