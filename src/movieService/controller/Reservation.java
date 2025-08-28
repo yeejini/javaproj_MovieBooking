@@ -6,6 +6,7 @@ import java.util.Scanner;
 
 import movieService.data.MovieSchedule;
 import movieService.model.Movie;
+import movieService.model.Seat;
 import movieService.model.Theater;
 import movieService.model.User;
 
@@ -120,11 +121,17 @@ public class Reservation {
 			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater) && schedule.getDate().equals(date)) {
                 // 이미 추가한 시간이면 건너뜀
             if (!addedTime.contains(schedule.getTime()) ) {
+                //시간별 key 생성
+                String seatKey = movie + "_" + theater + "_" + schedule.getTime();
+                int remainingSeats = Seat.getRemainingSeats(seatKey); //남은좌석 수 
+
+
                 //시간 리스트
-                System.out.println(idx + ". " + schedule.getTime());
+                System.out.println(idx + ". " + schedule.getTime() + "(남은좌석 : "+remainingSeats+")");
                 //좌석 리스트
 
 				TimeSeatList.add(schedule.getTime());
+                addedTime.add(schedule.getTime());
 				idx++;
             }
 				
@@ -163,12 +170,14 @@ public class Reservation {
         //인원 수 입력
 
         while(true){
-            System.out.println("<인원 수를 입력하세요> (숫자로 4명까지만 입력 가능합니다.)");
+
+            System.out.println("인원 수를 입력하세요. (숫자로 8명까지만 입력 가능합니다.)");
+
             int peopleNum = sc.nextInt();
             sc.nextLine();
             pNum = peopleNum;
-            if(peopleNum>4){
-            System.out.println("4명 이하로 설정해야합니다.");
+            if(peopleNum>8){
+            System.out.println("8명 이하로 설정해야합니다.");
             continue;
         }else{
             r.setPeople(peopleNum);
@@ -178,14 +187,15 @@ public class Reservation {
     }
     
 
-    public static boolean submitPayment(Scanner sc, Context<Reservation> reservContext){
+    public static void submitPayment(Scanner sc, Context<Reservation> reservContext,Seat seatManager){
         //로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
 
         System.out.println(Reservation.issueTicket(sc, reservContext));
 
+        
         System.out.println("예매하시겠습니다?");
-  boolean responese = false;
+
         while (true) {
             System.out.println("1. 예");
             System.out.println("2. 아니오");
@@ -206,6 +216,9 @@ public class Reservation {
                 System.out.println("예매가 취소되었습니다. 안녕히가세요.");
                 // Reservation 객체 가져오기
                 Reservation r = reservContext.getData().get(keyId);
+                String key = r.getMovie().getTitle() + "_" + r.getTheater().getTheaterName() + "_" + r.getTime();
+
+                
 
                 if (r != null) {
                     r.setUser(null);
@@ -216,17 +229,18 @@ public class Reservation {
                     r.setPeople(0);
                     r.setSeat(null);
                 }
-                responese = false;
-                return responese;
+                
+                seatManager.cancleSeat(key);
+                break;
             } else if (n == 1) {
                 System.out.println("예매가 완료되었습니다. 안녕히가세요.");
-                responese =true;
+                
                 break;
             } else {
                 System.out.println("번호를 잘못 입력하셨습니다. 다시 입력하세요>");
             }
         }
-        return responese;
+        
         
     }
 

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import movieService.controller.Context;
+import movieService.controller.LoginSession;
 import movieService.controller.Reservation;
 import movieService.data.MovieSchedule;
 import movieService.model.Movie;
