@@ -43,12 +43,13 @@ public String selectTheater(Scanner sc, Context<Reservation> reservContext) {
                                         .distinct() // 중복 제거
                                         .collect(Collectors.toList());
 
+	System.out.println("<극장을 선택하세요>");
     // 극장 목록 출력 후 선택
     for (int i = 0; i < theaterOption.size(); i++) {
         System.out.println((i + 1) + ". " + theaterOption.get(i));
     }
 
-    System.out.println("\n극장을 선택하세요 : ");
+	System.out.println("선택>");
     int inputTheater = Integer.parseInt(sc.nextLine());
 
     // 입력받은 값 저장
@@ -69,7 +70,7 @@ public String selectTheater(Scanner sc, Context<Reservation> reservContext) {
 }
 
 
-	public static void selectTheaterTime(Scanner sc, Context<Reservation> reservContext, String movieName) {
+	public static boolean selectTheaterTime(Scanner sc, Context<Reservation> reservContext, String movieName) {
 		// 극장선택 후 시간선택으로 넘어가는 로직
 
 
@@ -79,27 +80,40 @@ public String selectTheater(Scanner sc, Context<Reservation> reservContext) {
 		.distinct() // 중복 제거
 				.collect(Collectors.toList());
 
+		System.out.println("<극장을 선택하세요>");
 		// 목록 출력 후 선택
 		for (int i = 0; i < theaterOption.size(); i++) {
 			System.out.println((i + 1) + "." + theaterOption.get(i));
 		}
-		System.out.println("\n극장을 선택하세요 : ");
+
+		System.out.println("---------------------");
+		System.out.println("0번을 누르면 예매 취소됩니다.");
+		System.out.println(); // 마지막에 줄바꿈
+
+
+		System.out.println("선택>");
 		int inputTheater = Integer.parseInt(sc.nextLine());
-		selectTheater = theaterOption.get(inputTheater - 1);
+		if(inputTheater == 0){
+			return false;
+		}else{
+			selectTheater = theaterOption.get(inputTheater - 1);
 
-		//로그인 세션에 임시저장된 id값 가져옴
-		String keyId = LoginSession.getCurrentId();
+			//로그인 세션에 임시저장된 id값 가져옴
+			String keyId = LoginSession.getCurrentId();
 
 
-		// 입력받은 값 저장
-		Theater sTheater = new Theater(selectTheater);
-		reservContext.getData().get(keyId).setTheater(sTheater);
+			// 입력받은 값 저장
+			Theater sTheater = new Theater(selectTheater);
+			reservContext.getData().get(keyId).setTheater(sTheater);
 
-		// 저장된 값 출력
-		// 방금 선택한 Theater 객체 출력
-		Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
-		// System.out.println("저장된 극장: " + retrievedTheater.toString());
+			// 저장된 값 출력
+			// 방금 선택한 Theater 객체 출력
+			Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
+			// System.out.println("저장된 극장: " + retrievedTheater.toString());
 
+			return true;
+		}
+		
 	}
 
 	@Override
