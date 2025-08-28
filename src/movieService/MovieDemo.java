@@ -18,6 +18,8 @@ public class MovieDemo {
 		int pw = 1234;
 
 		Context<Reservation> reservContext = new Context<>();
+		Context<Integer[][]> seatContext = new Context<>();
+		Seat seatManager = new Seat(seatContext);
 
 		User newUser = new User(id, name, pw);
 		String keyId = id;
@@ -75,7 +77,7 @@ public class MovieDemo {
 				//자리 선택
 
 				//결제
-				Reservation.submitPayment(sc, reservContext);
+				Reservation.submitPayment(sc, reservContext,seatManager);
 				break;
 
 			}
@@ -98,7 +100,7 @@ public class MovieDemo {
 				//자리 선택
 
 				//결제
-				Reservation.submitPayment(sc, reservContext);
+				Reservation.submitPayment(sc, reservContext,seatManager);
 
 				break;
 

@@ -124,7 +124,7 @@ public class MovieBooking {
 				//자리 선택
 				seatManager.selectSeat(sc, reservContext);
 				//결제
-				Reservation.submitPayment(sc, reservContext);
+				Reservation.submitPayment(sc, reservContext,seatManager);
 				break;
 				}
 				}
@@ -156,9 +156,8 @@ public class MovieBooking {
 				//자리 선택
 				seatManager.selectSeat(sc, reservContext);
 				//결제
-				 boolean responese = Reservation.submitPayment(sc, reservContext);
-				 //예매 결제 여부를 seat 객체에 전달해줌
-				 seatManager.setPaymentResult(responese);
+				Reservation.submitPayment(sc, reservContext,seatManager);
+
 				break;
 				}
 				}
