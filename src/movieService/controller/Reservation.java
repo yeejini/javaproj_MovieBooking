@@ -98,7 +98,7 @@ public class Reservation {
     }
     
 
-    public static void selectTime(Scanner sc, Context<Reservation> reservContext){
+    public static boolean selectTime(Scanner sc, Context<Reservation> reservContext){
         //로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
 
@@ -113,7 +113,7 @@ public class Reservation {
 		ArrayList<String> TimeSeatList = new ArrayList<>();
         HashSet<String> addedTime = new HashSet<>(); // 중복 체크용
 
-        System.out.println("\n시간을 선택하세요.");
+        System.out.println("\n<시간을 선택하세요>");
 
          //사용자가 선택한 극장,영화,날짜와 MovieSchedule리스트에 존재하는 것과 매칭시켜 
         //매칭된 MovieSchedule의 시간+좌석 정보 출력
@@ -138,16 +138,27 @@ public class Reservation {
 			}
 		}
 
+        System.out.println("---------------------");
+		System.out.println("0번을 누르면 취소됩니다.");
+		System.out.println(); // 마지막에 줄바꿈
+
         //시간 선택
         System.out.println("선택>");
         int choice = Integer.parseInt(sc.nextLine());
-		String selectTime = TimeSeatList.get(choice - 1); // 선택된 날짜
-        r.setTime(selectTime);
-        //선택된 시간과 좌석 출력
-        System.out.println("선택된 시간: " + selectTime);
 
-        //좌석 출력
-        System.out.println("선택된 좌석: ");
+        if(choice == 0){
+			return false;
+		}else{
+            String selectTime = TimeSeatList.get(choice - 1); // 선택된 날짜
+            r.setTime(selectTime);
+            //선택된 시간과 좌석 출력
+            System.out.println("선택된 시간: " + selectTime);
+
+            //좌석 출력
+            // System.out.println("선택된 좌석: ");
+            return true;
+        }
+		
 
     }
 
@@ -159,7 +170,9 @@ public class Reservation {
         //인원 수 입력
 
         while(true){
+
             System.out.println("인원 수를 입력하세요. (숫자로 8명까지만 입력 가능합니다.)");
+
             int peopleNum = sc.nextInt();
             sc.nextLine();
             pNum = peopleNum;
