@@ -45,11 +45,19 @@ public class User {
 			System.out.println("사용할 아이디를 입력하세요(문자 4자리만 입력가능) : ");
 			id = sc.nextLine();
 			if (id.matches("^[a-zA-Z]{4}")) {
-				break;
+				// 이미 해당 id가 있는지 확인
+				if (reservContext.getData().containsKey(id)) {
+					System.out.println("이미 존재하는 아이디입니다. 다시 입력해주세요.");
+					// continue → 다시 루프 돌기
+				} else {
+					// 새 아이디 등록 가능
+					break;
+				}
 			} else {
-				System.out.println("아이디는 문자 4자리만 가능합니다.");
+				System.out.println("아이디 형식이 올바르지 않습니다. 다시 입력해주세요.");
 			}
 		}
+
 		// pw 와일문
 		int pw = 0;
 		while (true) {
@@ -82,6 +90,7 @@ public class User {
 		while (true) {
 			System.out.println("id를 입력하세요. : ");
 			String inputId = sc.nextLine();
+
 
 			// Map에서 해당 id에 대응되는 User 가져오기
 			Reservation reservation = reservContext.getData().get(inputId); // 여기서 실제 User 객체를 가져오는 것
