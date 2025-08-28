@@ -1,5 +1,7 @@
 package movieService.model;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Scanner;
 
 import movieService.controller.Context;
@@ -10,25 +12,28 @@ public class Seat {
 
 	// 영화 + 시간별 좌석 정보를 관리하는 context 호출
 	private static Context<Integer[][]> context;
-	private String selectedSeat; // 선택한 좌석 번호
-
+	private List<String> selectedSeats = new ArrayList<>(); // 선택한 좌석 번호
+	private static boolean paymentResult;
+	
 	public Seat(Context<Integer[][]> context) {
 		this.context = context;
 	}
-	public void setSelectedSeat(String seat) {
-			this.selectedSeat = seat;
+	
+	public void addSeat(String seat){
+		selectedSeats.add(seat);
+	}
+	public List<String> getSeat(){
+		return selectedSeats;
+	}
+	public void clearSeats(){
+		selectedSeats.clear();
 	}
 
-	public String getSelectedSeat() {
-			return selectedSeat;
-	}
-	private boolean paymentResult;
-
-	public void setPaymentResult(boolean result) {
-		this.paymentResult = result;
+	public static void setPaymentResult(boolean result) {
+		paymentResult = result;
 	}
 
-	public boolean getPaymentResult() {
+	public static boolean getPaymentResult() {
 		return paymentResult;
 	}
 		//좌석 출력 메서드
@@ -82,7 +87,7 @@ public class Seat {
             context.getData().put(key, seats);
         }
 		printSeats(key, seats);
-		int peonum=reserv.getPeople();
+		int peonum=reserv.getPeople(); //선택한 인원수 받아오기
 		
 		String strCol; // 입력받은 행이름
 		char charCol;// 선택한 행을 char로 바꿀때 사용
@@ -118,21 +123,27 @@ public class Seat {
 					seats[intCol][row - 1] = 1;
 
 					selectedSeat = "" + charCol + row;
-					this.setSelectedSeat(selectedSeat);
+					this.addSeat(selectedSeat);// 선택한 좌석 리스트에 추가
 					context.getData().put(key, seats); // 좌석 정보 저장
-					reserv.setSeat(selectedSeat); //reservation에 저장
+					reserv.setSeat(String.join(",",getSeat())); //reservation에 저장
 
 					break;
 				} else {
 					System.out.println("이미 예약된 좌석입니다.");
 				}
+					
 			}
 		}
+		System.out.println();
+		printSeats(key, seats);
+		System.out.println(String.join(",",getSeat()) + "이 선택되셨습니다.\n");
+		
 		
 	}
 
 	//남은좌석 출력하는 메서드 
-	public int getRemainingSeats(String key) {
+	public static int getRemainingSeats(String key) {
+		if(context == null) return 0;
 			Integer[][] seats = context.getData().getOrDefault(key, new Integer[5][5]);
 			int remaining = 0;
 			for (int i = 0; i < seats.length; i++) {
@@ -143,6 +154,21 @@ public class Seat {
 			return remaining;
 		}
 
+	// 예매 취소 메서드
+	public void cancleSeat(String key){
+			Integer[][] seats = context.getData().get(key);
+			if(seats ==null) return;
+		for(String seat :selectedSeats){
+				int col = Character.toUpperCase(seat.charAt(0))-65;
+				  int row = Integer.parseInt(seat.substring(1)) - 1;
+				  seats[col][row] = 0;
+			}
+			context.getData().put(key, seats);
+			clearSeats(); // 선택 좌석 리스트 초기화
+		}
+
 		//아니요 하면 선택한 좌석 다시 빈좌석으로 출력하는 부분
 		//인원수만큼 좌석 출력
+		//남은좌석 수 출력ㅁ
+
 }
