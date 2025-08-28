@@ -1,6 +1,7 @@
 package movieService.model;
 
 import java.security.Key;
+import java.util.InputMismatchException;
 import java.util.Scanner;
 
 
@@ -101,11 +102,11 @@ public class User {
 			} 
 
 			User user = reservation.getUser(); // null 체크 후 안전하게 가져오기
-			
+				
 				while (true) {
 					System.out.println("password를 입력하세요. : ");
+					try {
 					int inputPw = Integer.parseInt(sc.nextLine());
-
 					if (user.getPw() == inputPw) {
 						System.out.println(user.getName() + "님 로그인 성공!");
 						//외부에서 고유 id값 key로 전달받아 사용하기 위함
@@ -115,6 +116,10 @@ public class User {
 						System.out.println("비밀번호가 일치하지 않습니다.");
 						continue;
 					}
+					} catch (NumberFormatException e) {
+						System.err.println("숫자만 입력 가능합니다.");
+					}
+					
 				}
 			
 			break;
