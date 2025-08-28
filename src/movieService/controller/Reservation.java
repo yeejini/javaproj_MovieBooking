@@ -191,7 +191,7 @@ public class Reservation {
         //로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
 
-        System.out.println(Reservation.issueTicket(sc, reservContext));
+        System.out.println(Reservation.infoTicket(sc, reservContext));
 
         
         System.out.println("예매하시겠습니다?");
@@ -221,7 +221,6 @@ public class Reservation {
                 
 
                 if (r != null) {
-                    r.setUser(null);
                     r.setMovie(null);
                     r.setTheater(null);
                     r.setDate(null);
@@ -244,17 +243,15 @@ public class Reservation {
         
     }
 
-    public static String issueTicket(Scanner sc, Context<Reservation> reservContext){
-
-        //로그인 세션에 임시저장된 id값 가져옴
+    //티켓정보
+    public static String infoTicket(Scanner sc, Context<Reservation> reservContext){
+         //로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
         Reservation r = reservContext.getData().get(keyId);
-
          // Reservation 객체나 필드가 null인지 체크
         if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
             return "티켓 정보가 없습니다.";
         }
-
         String name = r.getUser().getName();
         String theater = r.getTheater().getTheaterName();
         String movie = r.getMovie().getTitle();
@@ -294,10 +291,55 @@ public class Reservation {
 
                 """.formatted(name, name,theater,movie,screen,date,time,pNum,seat);
 
+            return reservInfo;
 
-
-        return reservInfo;
     }
+
+    //티켓조회
+    public static void issueTicket(Scanner sc, Context<Reservation> reservContext, Seat seatManager) {
+    // 로그인 세션에 임시저장된 id값 가져옴
+    String keyId = LoginSession.getCurrentId();
+    Reservation r = reservContext.getData().get(keyId);
+
+    if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
+        System.out.println("티켓 정보가 없습니다.");
+        return;
+    }
+
+    // 예매 정보 출력
+    System.out.println(infoTicket(sc, reservContext));
+
+    // 취소 여부 확인
+    System.out.println("예매를 취소하시려면 0번을 선택하세요. (다른 번호 입력 시 유지됩니다.)");
+    System.out.print("선택> ");
+
+    try {
+        int choice = Integer.parseInt(sc.nextLine());
+
+        if (choice == 0) {
+            String key = r.getMovie().getTitle() + "_" + r.getTheater().getTheaterName() + "_" + r.getTime();
+
+            // 예약 객체 초기화
+            r.setMovie(null);
+            r.setTheater(null);
+            r.setDate(null);
+            r.setTime(null);
+            r.setPeople(0);
+            r.setSeat(null);
+
+            // 좌석 취소
+            seatManager.cancleSeat(key);
+
+            System.out.println("예매가 취소되었습니다.");
+        } else {
+            System.out.println("예매를 유지합니다.");
+        }
+    } catch (NumberFormatException e) {
+        System.out.println("잘못된 입력입니다. 예매를 유지합니다.");
+    }
+}
+
+    
 
       
         

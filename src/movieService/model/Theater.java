@@ -49,24 +49,34 @@ public String selectTheater(Scanner sc, Context<Reservation> reservContext) {
         System.out.println((i + 1) + ". " + theaterOption.get(i));
     }
 
+	System.out.println("---------------------");
+		System.out.println("0번을 누르면 예매 취소됩니다.");
+		System.out.println(); // 마지막에 줄바꿈
+
 	System.out.println("선택>");
     int inputTheater = Integer.parseInt(sc.nextLine());
 
-    // 입력받은 값 저장
-    String selectTheater = theaterOption.get(inputTheater - 1);
-    Theater sTheater = new Theater(selectTheater);
+	if(inputTheater == 0){
+			return null;
+		}else{
+			// 입력받은 값 저장
+			String selectTheater = theaterOption.get(inputTheater - 1);
+			Theater sTheater = new Theater(selectTheater);
 
-    // 로그인 세션에 임시저장된 id값 가져옴
-    String keyId = LoginSession.getCurrentId();
+			// 로그인 세션에 임시저장된 id값 가져옴
+			String keyId = LoginSession.getCurrentId();
 
-    // 해당 id가 key로 저장되어 있는 reservContext 객체 가져와서 극장명이 담긴 극장 객체 저장
-    reservContext.getData().get(keyId).setTheater(sTheater);
+			// 해당 id가 key로 저장되어 있는 reservContext 객체 가져와서 극장명이 담긴 극장 객체 저장
+			reservContext.getData().get(keyId).setTheater(sTheater);
 
-    // 방금 선택한 Theater 객체 출력
-    Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
-    // System.out.println("저장된 극장: " + retrievedTheater.toString());
+			// 방금 선택한 Theater 객체 출력
+			Theater retrievedTheater = reservContext.getData().get(keyId).getTheater();
+			// System.out.println("저장된 극장: " + retrievedTheater.toString());
 
-    return retrievedTheater.toString();
+			return retrievedTheater.toString();
+		}
+
+    
 }
 
 

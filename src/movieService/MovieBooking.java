@@ -96,8 +96,10 @@ public class MovieBooking {
 
 				switch (mainMenu) {
 					case "1" -> { // 티켓 조회
-						String ticketInfo = Reservation.issueTicket(sc, reservContext);
-						System.out.println(ticketInfo);
+						Reservation.issueTicket(sc, reservContext,seatManager);
+						// System.out.println(ticketInfo);
+						
+						
 					}
 
 					case "2" -> { // 영화별 예매
