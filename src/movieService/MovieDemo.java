@@ -56,7 +56,7 @@ public class MovieDemo {
 			}
 			switch (mainMenu) {
 			case "1" -> {
-				Reservation.issueTicket(sc, reservContext);
+				Reservation.issueTicket(sc, reservContext, seatManager);
 				break;
 			}
 
