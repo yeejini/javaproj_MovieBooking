@@ -188,9 +188,17 @@ public class MovieBooking {
 
             case PEOPLE -> {
                 int peopleNum = Reservation.inputPeople(sc, reservContext);
-                int seatnum = seatManager.getRemainingSeats(mainMenu);
-                if (seatnum - peopleNum < 0) {
-                    System.out.println("남은 좌석이 없습니다.");
+				System.out.println("입렵된 인원 수 : "+ peopleNum);
+                // 인원수를 남은좌석에 반영하기 위한 코드 추가*
+				Reservation reserv = reservContext.getData().get(LoginSession.getCurrentId());
+				int seatnum = Seat.getRemainingSeats(
+				reserv.getMovie().getTitle() + "_" + reserv.getTheater().getTheaterName() + "_" + reserv.getTime()
+				);
+				int result = seatnum - peopleNum;
+
+                 if(result<0){
+					System.out.println("남은 좌석이 없습니다.");
+					continue;
                 } else {
                     step = Step.SEAT;
                 }
@@ -202,8 +210,7 @@ public class MovieBooking {
             }
 
             case PAYMENT -> {
-                boolean response = Reservation.submitPayment(sc, reservContext);
-                seatManager.setPaymentResult(response);
+                 Reservation.submitPayment(sc, reservContext,seatManager);
                 step = Step.EXIT;
             }
         }
