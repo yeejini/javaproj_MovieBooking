@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Scanner;
 
 import movieService.controller.Context;
+import movieService.controller.LoginSession;
 import movieService.controller.Reservation;
 import movieService.data.MovieSchedule;
 import movieService.model.Movie;
@@ -121,8 +122,12 @@ public class MovieBooking {
 				while (true) {
 				int peopleNum = Reservation.inputPeople(sc,reservContext);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
-				
-				int seatnum = seatManager.getRemainingSeats(mainMenu);
+
+				// 인원수를 남은좌석에 반영하기 위한 코드 추가*
+				Reservation reserv = reservContext.getData().get(LoginSession.getCurrentId());
+				int seatnum = Seat.getRemainingSeats(
+					reserv.getMovie().getTitle() + "_" + reserv.getTheater().getTheaterName() + "_" + reserv.getTime()
+				);
 				int result = seatnum - peopleNum;
 				if(result<0){
 					System.out.println("남은 좌석이 없습니다.");
@@ -154,7 +159,11 @@ public class MovieBooking {
 				while (true) {
 				int peopleNum = Reservation.inputPeople(sc,reservContext);
 				System.out.println("입렵된 인원 수 : "+ peopleNum);
-				int seatnum = seatManager.getRemainingSeats(mainMenu);
+				// 인원수를 남은좌석에 반영하기 위한 코드 추가*
+				Reservation reserv = reservContext.getData().get(LoginSession.getCurrentId());
+				int seatnum = Seat.getRemainingSeats(
+					reserv.getMovie().getTitle() + "_" + reserv.getTheater().getTheaterName() + "_" + reserv.getTime()
+				);
 				int result = seatnum - peopleNum;
 				if(result<0){
 					System.out.println("남은 좌석이 없습니다.");
