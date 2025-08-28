@@ -14,14 +14,10 @@ import movieService.model.User;
 public class MovieBooking {
 
 	public static void main(String[] args) {
-		ArrayList<MovieSchedule> ms = new ArrayList<>();
+		// ArrayList<MovieSchedule> ms = new ArrayList<>();
 
 
   		Context<Reservation> reservContext = new Context<>();
-
-
-		Context<Integer[][]> seatContext = new Context<>();
-				Seat seatManager = new Seat(seatContext);
 
 
 		String welcomMsg = """
@@ -30,18 +26,13 @@ public class MovieBooking {
 				""";
 
 		String loginMsg = """
-				-------------------------------
+				----------------------------------
 				  1. 회원가입 | 2. 로그인 | 3. 취소
-				-------------------------------
+				----------------------------------
 				선택>
 				""";
 
-		String menuMsg = """
-				---------------------------------------------
-				  1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 취소
-				---------------------------------------------
-				선택>
-				""";
+		
 
 		Scanner sc = new Scanner(System.in);
 
@@ -69,15 +60,31 @@ public class MovieBooking {
 
 			case "2" -> {
 				User.login(sc, reservContext);
-				run = false;
+				mainMenu(sc, reservContext);
+				// run = false;
 			}
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
 
-		// 메인 메뉴 기능 로직 : mainMenu
+		
+		
+	}
+	
+	// 메인 메뉴 기능 로직 : mainMenu
+	public static void mainMenu(Scanner sc, Context<Reservation> reservContext){
+		String menuMsg = """
+				-----------------------------------------------------
+				  1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 로그아웃
+				-----------------------------------------------------
+				선택>
+				""";
 
-		run = true;
+		
+			Context<Integer[][]> seatContext = new Context<>();
+			Seat seatManager = new Seat(seatContext);
+
+		boolean run = true;
 
 		Theater t = new Theater("");
 		String theaterName = "";
@@ -89,7 +96,7 @@ public class MovieBooking {
 			System.out.println(menuMsg);
 			mainMenu = sc.nextLine();
 			if (mainMenu.equals("4")) {
-				System.out.println("안녕히 가세요.");
+				System.out.println("로그아웃 합니다. 로그인 메뉴로 돌아갑니다.");
 				return;
 			}
 			switch (mainMenu) {
