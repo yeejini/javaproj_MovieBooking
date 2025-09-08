@@ -23,8 +23,8 @@
 //		Context<Reservation> reservContext = new Context<>();
 //		Context<Integer[][]> seatContext = new Context<>();
 //		Seat seatManager = new Seat(seatContext);
-//
-//		User newUser = new User(id, name, pw);
+//		Connection conn = MakeConnection.getConnection();
+//		User newUser = new User(id, name, pw, conn);
 //		String keyId = id;
 //		Reservation reservation = new Reservation(keyId, newUser);
 //		reservContext.getData().put(keyId, reservation);
@@ -38,7 +38,6 @@
 //				선택>
 //				""";
 //		Scanner sc = new Scanner(System.in);
-//		Connection conn = MakeConnection.getConnection();
 //
 //		boolean run = true;
 //
@@ -104,17 +103,13 @@
 //				// 결제
 //				Reservation.submitPayment(sc, reservContext, seatManager);
 //
-//// 				break;
+//				break;
 //
-//// 			}
-//
+//			}
 //
 //			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 //			}
 //		}
 //
-//
 //	}
 //
-//// }
-

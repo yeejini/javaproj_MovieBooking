@@ -186,7 +186,7 @@ public class MovieBooking {
 			}
 
 			case TIME -> {
-				boolean ok = Reservation.selectTime(sc, reservContext);
+				boolean ok = Reservation.selectTime(sc, reservContext, conn);
 				step = ok ? Step.PEOPLE : Step.DATE;
 			}
 
@@ -195,8 +195,10 @@ public class MovieBooking {
 				System.out.println("입렵된 인원 수 : " + peopleNum);
 				// 인원수를 남은좌석에 반영하기 위한 코드 추가*
 				Reservation reserv = reservContext.getData().get(LoginSession.getCurrentId());
-				int seatnum = Seat.getRemainingSeats(reserv.getMovie().getTitle() + "_"
-						+ reserv.getTheater().getTheaterName() + "_" + reserv.getTime());
+//				int seatnum = Seat.getRemainingSeats(reserv.getMovie().getTitle() + "_"
+//						+ reserv.getTheater().getTheaterName() + "_" + reserv.getTime(), conn);
+				String scheduleId = reserv.getScheduleId(); // Reservation 객체에서 schedule_id 가져오기
+				int seatnum = Seat.getRemainingSeats(scheduleId, conn);
 				int result = seatnum - peopleNum;
 
 				if (result < 0) {
