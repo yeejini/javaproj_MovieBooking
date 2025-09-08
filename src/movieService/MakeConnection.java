@@ -4,11 +4,10 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 
-
 public class MakeConnection {
-    public static Connection getConnection() {
+	public static Connection getConnection() {
 		// endpoint
-		String url = "jdbc:mysql://localhost:3306/madang?serverTimezone=Asia/Seoul";
+		String url = "jdbc:mysql://localhost:3306/movieservice?serverTimezone=Asia/Seoul";
 		Connection conn = null;
 
 		// 1. 드라이버 로드
@@ -16,7 +15,7 @@ public class MakeConnection {
 			Class.forName("com.mysql.cj.jdbc.Driver");
 			System.out.println("데이터베이스 연결 중...");
 			// 2. 데이터베이스 연결
-			conn = DriverManager.getConnection(url, "madang", "madang"); // 연결정보
+			conn = DriverManager.getConnection(url, "root", "1111"); // 연결정보
 			System.out.println("데이터베이스 연결 성공");
 
 		} catch (ClassNotFoundException e) {

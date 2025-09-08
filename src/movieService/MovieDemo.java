@@ -1,5 +1,6 @@
 package movieService;
 
+import java.sql.Connection;
 import java.util.Scanner;
 
 import movieService.controller.Context;
@@ -26,9 +27,7 @@ public class MovieDemo {
 		Reservation reservation = new Reservation(keyId, newUser);
 		reservContext.getData().put(keyId, reservation);
 
-		LoginSession.setCurrentId(keyId); //로그인 완료 시 그 id값 로그인세션에 저장
-
-
+		LoginSession.setCurrentId(keyId); // 로그인 완료 시 그 id값 로그인세션에 저장
 
 		String menuMsg = """
 				---------------------------------------------
@@ -37,6 +36,7 @@ public class MovieDemo {
 				선택>
 				""";
 		Scanner sc = new Scanner(System.in);
+		Connection conn = MakeConnection.getConnection();
 
 		boolean run = true;
 
@@ -66,53 +66,50 @@ public class MovieDemo {
 				movieName = m.selectMovie(sc, reservContext, theaterName);
 //				Movie.selectMovieByTheater(sc, movie, theaterName);
 				// 극장 선택
-				Theater.selectTheaterTime(sc, reservContext, movieName);
+				Theater.selectTheaterTime(sc, reservContext, movieName, conn);
 				// 날짜 선택
 				Movie.selectDate(sc, reservContext);
-				//시간 선택
+				// 시간 선택
 				Reservation.selectTime(sc, reservContext);
-				//인원수 입력
-				int peopleNum = Reservation.inputPeople(sc,reservContext);
-				System.out.println("입렵된 인원 수 : "+ peopleNum);
-				//자리 선택
+				// 인원수 입력
+				int peopleNum = Reservation.inputPeople(sc, reservContext);
+				System.out.println("입렵된 인원 수 : " + peopleNum);
+				// 자리 선택
 
-				//결제
-				Reservation.submitPayment(sc, reservContext,seatManager);
+				// 결제
+				Reservation.submitPayment(sc, reservContext, seatManager);
 				break;
 
 			}
 			// 극장별 예매
 			case "3" -> {
 				// 극장 선택
-				theaterName = t.selectTheater(sc, reservContext);
+				theaterName = t.selectTheater(sc, reservContext, conn);
 				// 영화 선택
 				movieName = m.selectMovie(sc, reservContext, theaterName);
 
 				// 날짜 선택
 				Movie.selectDate(sc, reservContext);
 
-				//시간 선택
+				// 시간 선택
 				Reservation.selectTime(sc, reservContext);
-				//인원수 입력
-				int peopleNum = Reservation.inputPeople(sc,reservContext);
-				System.out.println("입렵된 인원 수 : "+ peopleNum);
-				
-				//자리 선택
+				// 인원수 입력
+				int peopleNum = Reservation.inputPeople(sc, reservContext);
+				System.out.println("입렵된 인원 수 : " + peopleNum);
 
-				//결제
-				Reservation.submitPayment(sc, reservContext,seatManager);
+				// 자리 선택
+
+				// 결제
+				Reservation.submitPayment(sc, reservContext, seatManager);
 
 				break;
 
 			}
 
-			
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
-		
-		
-	}
 
+	}
 
 }
