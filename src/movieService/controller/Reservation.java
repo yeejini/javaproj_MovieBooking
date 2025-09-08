@@ -1,5 +1,9 @@
 package movieService.controller;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -104,44 +108,77 @@ public class Reservation {
 		this.selectedSeat = seat;
 	}
 
-	public static boolean selectTime(Scanner sc, Context<Reservation> reservContext) {
+	public static boolean selectTime(Scanner sc, Context<Reservation> reservContext, Connection conn) {
 		// 로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
 
 		// 시간+남은 좌석 리스트 출력
 		// 앞에서 진행한 reservation객체의 정보 가져오기(극장명, 영화명, 날짜)
 		Reservation r = reservContext.getData().get(keyId);
-		String theater = r.getTheater().getTheaterName();
-		String movie = r.getMovie().getTitle();
+		String theaterId = r.getTheater().getTheaterId();
+		String movieId = r.getMovie().getMovieId();
 		String date = r.getMovie().getDate();
 
 		int idx = 1;
-		ArrayList<String> TimeSeatList = new ArrayList<>();
+		ArrayList<String> timeList = new ArrayList<>();
 		HashSet<String> addedTime = new HashSet<>(); // 중복 체크용
 
 		System.out.println("\n<시간을 선택하세요>");
 
 		// 사용자가 선택한 극장,영화,날짜와 MovieSchedule리스트에 존재하는 것과 매칭시켜
 		// 매칭된 MovieSchedule의 시간+좌석 정보 출력
-		for (MovieSchedule schedule : MovieSchedule.movieS) {
-			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater)
-					&& schedule.getDate().equals(date)) {
-				// 이미 추가한 시간이면 건너뜀
-				if (!addedTime.contains(schedule.getTime())) {
-					// 시간별 key 생성
-					String seatKey = movie + "_" + theater + "_" + schedule.getTime();
-					int remainingSeats = Seat.getRemainingSeats(seatKey); // 남은좌석 수
+//		for (MovieSchedule schedule : MovieSchedule.movieS) {
+//			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater)
+//					&& schedule.getDate().equals(date)) {
+//				// 이미 추가한 시간이면 건너뜀
+//				if (!addedTime.contains(schedule.getTime())) {
+//					// 시간별 key 생성
+//					String seatKey = movie + "_" + theater + "_" + schedule.getTime();
+//					int remainingSeats = Seat.getRemainingSeats(seatKey); // 남은좌석 수
+//
+//					// 시간 리스트
+//					System.out.println(idx + ". " + schedule.getTime() + "(남은좌석 : " + remainingSeats + ")");
+//					// 좌석 리스트
+//
+//					TimeSeatList.add(schedule.getTime());
+//					addedTime.add(schedule.getTime());
+//					idx++;
+//				}
+//
+//			}
+//		}
+		try {
+			String sql = "SELECT DISTINCT ms.time, ms.schedule_id " + "FROM MovieSchedule ms "
+					+ "WHERE ms.movie_id = ? AND ms.theater_id = ? AND ms.date = ?";
+			try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+				pstmt.setString(1, movieId);
+				pstmt.setString(2, theaterId);
+				pstmt.setString(3, date);
+				ResultSet rs = pstmt.executeQuery();
 
-					// 시간 리스트
-					System.out.println(idx + ". " + schedule.getTime() + "(남은좌석 : " + remainingSeats + ")");
-					// 좌석 리스트
+				while (rs.next()) {
+					String time = rs.getString("time");
+					String scheduleId = rs.getString("schedule_id");
 
-					TimeSeatList.add(schedule.getTime());
-					addedTime.add(schedule.getTime());
-					idx++;
+					if (!addedTime.contains(time)) {
+						// 좌석 수 계산 (Seat 클래스 or DB 조회)
+						int remainingSeats = Seat.getRemainingSeats(scheduleId, conn);
+
+						System.out.println(idx + ". " + time + " (남은좌석 : " + remainingSeats + ")");
+						timeList.add(time);
+						addedTime.add(time);
+						idx++;
+					}
 				}
-
 			}
+		} catch (SQLException e) {
+			System.err.println("시간 조회 중 오류 발생: " + e.getMessage());
+			return false;
+		}
+
+		if (timeList.isEmpty()) {
+			System.out.println("해당 날짜에는 상영 시간이 없습니다.");
+			return false;
 		}
 
 		System.out.println("---------------------");
@@ -155,7 +192,7 @@ public class Reservation {
 		if (choice == 0) {
 			return false;
 		} else {
-			String selectTime = TimeSeatList.get(choice - 1); // 선택된 날짜
+			String selectTime = timeList.get(choice - 1); // 선택된 날짜
 			r.setTime(selectTime);
 			// 선택된 시간과 좌석 출력
 			System.out.println("선택된 시간: " + selectTime);
