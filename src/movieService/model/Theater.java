@@ -23,9 +23,6 @@ public class Theater {
 	private String theaterId;
 	private String theaterName;
 
-
-	private String theaterId; // DB PK
-
 	void setTheaterName(String theaterName) {
 		this.theaterName = theaterName;
 	}
@@ -42,7 +39,6 @@ public class Theater {
 		this.theaterName = theaterName;
 	}
 
-
 	public String getTheaterId() {
 		return theaterId;
 	}
@@ -50,7 +46,6 @@ public class Theater {
 	public String getTheaterName() {
 		return theaterName;
 	}
-
 
 	// 극장 선택 메서드
 	public String selectTheater(Scanner sc, Context<Reservation> reservContext, Connection conn) {
@@ -120,7 +115,7 @@ public class Theater {
 
 	}
 
-	public static boolean selectTheaterTime(Scanner sc, Context<Reservation> reservContext, String movieName,
+	public static boolean selectTheaterTime(Scanner sc, Context<Reservation> reservContext, String movieId,
 			Connection conn) {
 		// 극장선택 후 시간선택으로 넘어가는 로직
 
@@ -134,11 +129,10 @@ public class Theater {
 					select distinct t.theater_id ,t.t_name
 					from movieschedule ms
 					join theater t on ms.theater_id = t.theater_id
-					join movie m on ms.movie_id= m.movie_id
-					where m.title = ?;
+					where ms.movie_id = ?;
 						""";
 			PreparedStatement stmt = conn.prepareStatement(sql);
-			stmt.setString(1, movieName);
+			stmt.setString(1, movieId);
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
 				theaterOption.add(rs.getString("t_name"));
@@ -180,12 +174,8 @@ public class Theater {
 
 			Theater sTheater = new Theater(selectTheaterId, selectTheater);
 
-
-			if (!reservContext.getData().containsKey(keyId)) {
-				reservContext.getData().put(keyId, new Reservation(keyId, null));
-			}
-
-			reservContext.getData().get(keyId).setTheater(sTheater);
+			Reservation reservation = reservContext.getData().get(keyId);
+			reservation.setTheater(sTheater);
 
 			// 저장된 값 출력
 			// 방금 선택한 Theater 객체 출력

@@ -136,7 +136,7 @@ public class Movie {
 		System.out.println(); // 마지막에 줄바꿈
 
 		// 영화 선택
-		
+
 		System.out.println("선택>");
 		int choice = Integer.parseInt(sc.nextLine());
 
@@ -209,7 +209,7 @@ public class Movie {
 
 		try {
 			String sql = "SELECT DISTINCT date FROM MovieSchedule ms " + "JOIN Movie m ON ms.movie_id = m.movie_id "
-					+ "WHERE m.title = ? AND ms.theater_id = ?";
+					+ "WHERE m.movie_id = ? AND ms.theater_id = ?";
 			try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 				pstmt.setString(1, movieId);
 				pstmt.setString(2, selectTheaterId);
