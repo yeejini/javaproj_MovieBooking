@@ -23,23 +23,34 @@ public class Theater {
 	private String theaterId;
 	private String theaterName;
 
+
+	private String theaterId; // DB PK
+
+	void setTheaterName(String theaterName) {
+		this.theaterName = theaterName;
+	}
+
 	// 생성자
+	// 극장 ID만 알 때
+	public Theater(String theaterId) {
+		this.theaterId = theaterId;
+	}
+
+	// 극장 ID + 이름 둘 다 알 때
 	public Theater(String theaterId, String theaterName) {
 		this.theaterId = theaterId;
 		this.theaterName = theaterName;
 	}
 
-	public Theater(String theaterName) {
-		this.theaterName = theaterName;
+
+	public String getTheaterId() {
+		return theaterId;
 	}
 
 	public String getTheaterName() {
 		return theaterName;
 	}
 
-	public String getTheaterId() {
-		return theaterId;
-	}
 
 	// 극장 선택 메서드
 	public String selectTheater(Scanner sc, Context<Reservation> reservContext, Connection conn) {
@@ -166,7 +177,9 @@ public class Theater {
 			String keyId = LoginSession.getCurrentId();
 
 			// 입력받은 값 저장
+
 			Theater sTheater = new Theater(selectTheaterId, selectTheater);
+
 
 			if (!reservContext.getData().containsKey(keyId)) {
 				reservContext.getData().put(keyId, new Reservation(keyId, null));

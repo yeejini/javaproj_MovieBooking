@@ -122,8 +122,8 @@ public class MovieBooking {
 			String mainMenu, Connection conn) {
 
 		Step step = movieFirst ? Step.MOVIE : Step.THEATER;
-		String theaterName = "";
-		String movieName = "";
+		String theaterId = "";
+		String movieId = "";
 
 		while (step != Step.EXIT) {
 			switch (step) {
@@ -132,8 +132,8 @@ public class MovieBooking {
 				// 영화별예매 선택 시
 				if (movieFirst) {
 					// 영화 선택
-					movieName = m.selectMovie(sc, reservContext, theaterName);
-					if (movieName == null) {
+					movieId = m.selectMovie(sc, reservContext, theaterId, conn);
+					if (movieId == null) {
 						step = Step.EXIT; // 취소 시 메뉴로 돌아감
 					} else {
 						// 영화별 선택 (영화선택 후 극장 선택 -> selectTheaterTime호출)
@@ -141,9 +141,9 @@ public class MovieBooking {
 					}
 					// 극장별 예매일경우(극장 선택됨 -> 영화선택후 날짜)
 				} else {
-					movieName = m.selectMovie(sc, reservContext, theaterName);
+					movieId = m.selectMovie(sc, reservContext, theaterId, conn);
 					// 취소시 극장 선택으로 돌아감
-					if (movieName == null) {
+					if (movieId == null) {
 						step = Step.THEATER;
 					} else {
 						// 영화 선택까지됨 -> 날짜선택
@@ -157,9 +157,10 @@ public class MovieBooking {
 				if (!movieFirst) {
 					// 극장별 예매: 영화 선택 + 시간 선택
 
-					theaterName = t.selectTheater(sc, reservContext, conn);
+					theaterId = t.selectTheater(sc, reservContext, conn);
 
-					if (theaterName == null) {
+					if (theaterId == null) {
+
 						step = Step.EXIT; // 취소 시 메뉴로 돌아감
 					} else {
 						// 극장 선택 시, 영화 선택으로 감
@@ -168,14 +169,14 @@ public class MovieBooking {
 				} else {
 					// 영화별 예매: 영화선택 된 상태로 극장 선택
 
-					boolean ok = Theater.selectTheaterTime(sc, reservContext, movieName, conn);
+					boolean ok = Theater.selectTheaterTime(sc, reservContext, movieId, conn);
 
 					step = ok ? Step.DATE : Step.MOVIE;
 				}
 			}
 
 			case DATE -> {
-				boolean ok = Movie.selectDate(sc, reservContext);
+				boolean ok = Movie.selectDate(sc, reservContext, conn);
 				step = ok ? Step.TIME : (movieFirst ? Step.THEATER : Step.MOVIE);
 			}
 
