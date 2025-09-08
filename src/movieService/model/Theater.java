@@ -133,8 +133,7 @@ public class Theater {
 					select distinct t.theater_id ,t.t_name
 					from movieschedule ms
 					join theater t on ms.theater_id = t.theater_id
-					join movie m on ms.movie_id= m.movie_id
-					where m.movie_id = ?;
+					where ms.movie_id = ?;
 						""";
 			PreparedStatement stmt = conn.prepareStatement(sql);
 			stmt.setString(1, movieId);
@@ -179,11 +178,8 @@ public class Theater {
 
 			Theater sTheater = new Theater(selectTheaterId, selectTheater);
 
-			if (!reservContext.getData().containsKey(keyId)) {
-				reservContext.getData().put(keyId, new Reservation(keyId, null));
-			}
-
-			reservContext.getData().get(keyId).setTheater(sTheater);
+			Reservation reservation = reservContext.getData().get(keyId);
+			reservation.setTheater(sTheater);
 
 			// 저장된 값 출력
 			// 방금 선택한 Theater 객체 출력
