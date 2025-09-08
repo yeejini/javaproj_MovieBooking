@@ -57,8 +57,9 @@ public class MovieBooking {
 			}
 
 			case "2" -> {
+				mainMenu(sc, reservContext, conn);
 				User.login(sc, reservContext, conn);
-				mainMenu(sc, reservContext);
+
 				// run = false;
 			}
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
@@ -71,8 +72,8 @@ public class MovieBooking {
 		MOVIE, THEATER, DATE, TIME, PEOPLE, SEAT, PAYMENT, EXIT
 	}
 
-	public static void mainMenu(Scanner sc, Context<Reservation> reservContext) {
-		Connection conn = MakeConnection.getConnection();
+	public static void mainMenu(Scanner sc, Context<Reservation> reservContext, Connection conn) {
+
 		String menuMsg = """
 				-----------------------------------------------------
 				1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 로그아웃
@@ -98,11 +99,12 @@ public class MovieBooking {
 			}
 
 			case "2" -> { // 영화별 예매
-				runReservation(sc, reservContext, seatManager, m, t, true, mainMenu);
+
+				runReservation(sc, reservContext, seatManager, m, t, true, mainMenu, conn);
 			}
 
 			case "3" -> { // 극장별 예매
-				runReservation(sc, reservContext, seatManager, m, t, false, mainMenu);
+				runReservation(sc, reservContext, seatManager, m, t, false, mainMenu, conn);
 			}
 
 			case "4" -> { // 로그아웃
@@ -117,12 +119,12 @@ public class MovieBooking {
 
 	private static void runReservation(Scanner sc, Context<Reservation> reservContext, Seat seatManager, Movie m,
 			Theater t, boolean movieFirst, // true면 영화별 예매, false면 극장별 예매
-			String mainMenu) {
+
+			String mainMenu, Connection conn) {
+
 		Step step = movieFirst ? Step.MOVIE : Step.THEATER;
 		String theaterId = "";
 		String movieId = "";
-
-		Connection conn = MakeConnection.getConnection();
 
 		while (step != Step.EXIT) {
 			switch (step) {
@@ -155,8 +157,11 @@ public class MovieBooking {
 			case THEATER -> {
 				if (!movieFirst) {
 					// 극장별 예매: 영화 선택 + 시간 선택
-					theaterId = t.selectTheater(sc, reservContext);
+
+					theaterId = t.selectTheater(sc, reservContext, conn);
+
 					if (theaterId == null) {
+
 						step = Step.EXIT; // 취소 시 메뉴로 돌아감
 					} else {
 						// 극장 선택 시, 영화 선택으로 감
@@ -164,7 +169,9 @@ public class MovieBooking {
 					}
 				} else {
 					// 영화별 예매: 영화선택 된 상태로 극장 선택
-					boolean ok = Theater.selectTheaterTime(sc, reservContext, movieId);
+
+					boolean ok = Theater.selectTheaterTime(sc, reservContext, movieId, conn);
+
 					step = ok ? Step.DATE : Step.MOVIE;
 				}
 			}

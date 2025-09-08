@@ -136,6 +136,7 @@ public class Movie {
 		System.out.println(); // 마지막에 줄바꿈
 
 		// 영화 선택
+		
 		System.out.println("선택>");
 		int choice = Integer.parseInt(sc.nextLine());
 
