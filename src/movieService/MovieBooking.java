@@ -58,6 +58,11 @@ public class MovieBooking {
 
 			case "2" -> {
 				User.login(sc, reservContext, conn);
+				// 로그인 성공 후 Reservation 객체 생성
+				String keyId = LoginSession.getCurrentId();
+				if (!reservContext.getData().containsKey(keyId)) {
+					reservContext.getData().put(keyId, new Reservation(keyId, null));
+				}
 				mainMenu(sc, reservContext, conn);
 				// run = false;
 			}
@@ -132,7 +137,7 @@ public class MovieBooking {
 				// 영화별예매 선택 시
 				if (movieFirst) {
 					// 영화 선택
-					movieId = m.selectMovie(sc, reservContext, theaterId, conn);
+					movieId = m.selectMovie(sc, reservContext, null, conn);
 					if (movieId == null) {
 						step = Step.EXIT; // 취소 시 메뉴로 돌아감
 					} else {
