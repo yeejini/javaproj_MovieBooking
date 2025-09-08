@@ -57,9 +57,8 @@ public class MovieBooking {
 			}
 
 			case "2" -> {
-				mainMenu(sc, reservContext, conn);
 				User.login(sc, reservContext, conn);
-
+				mainMenu(sc, reservContext, conn);
 				// run = false;
 			}
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
@@ -71,7 +70,6 @@ public class MovieBooking {
 	enum Step {
 		MOVIE, THEATER, DATE, TIME, PEOPLE, SEAT, PAYMENT, EXIT
 	}
-
 
 	public static void mainMenu(Scanner sc, Context<Reservation> reservContext, Connection conn) {
 
