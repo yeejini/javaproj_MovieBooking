@@ -20,8 +20,10 @@ public class Theater {
 //
 //	}
 	static String selectTheater;
+	private String theaterId;
+	private String theaterName;
 
-	String theaterName;
+
 	private String theaterId; // DB PK
 
 	void setTheaterName(String theaterName) {
@@ -40,6 +42,7 @@ public class Theater {
 		this.theaterName = theaterName;
 	}
 
+
 	public String getTheaterId() {
 		return theaterId;
 	}
@@ -48,16 +51,20 @@ public class Theater {
 		return theaterName;
 	}
 
+
+	// 극장 선택 메서드
 	public String selectTheater(Scanner sc, Context<Reservation> reservContext, Connection conn) {
 		/* sql 수정부분 start */
+		List<String> theaterIds = new ArrayList<>();
 		List<String> theaterOption = new ArrayList<>();
 		try {
 			// sql실행
-			String sql = "select distinct t_name from Theater";
+			String sql = "select theater_id, t_name from Theater";
 			PreparedStatement stmt = conn.prepareStatement(sql);
 			ResultSet rs = stmt.executeQuery();
 			// t_name 값들 theaterOption에 저장
 			while (rs.next()) {
+				theaterIds.add(rs.getString("theater_id"));
 				theaterOption.add(rs.getString("t_name"));
 			}
 			rs.close();
@@ -87,7 +94,8 @@ public class Theater {
 		} else {
 			// 입력받은 값 저장
 			String selectTheater = theaterOption.get(inputTheater - 1);
-			Theater sTheater = new Theater(selectTheater);
+			String selectTheaterId = theaterIds.get(inputTheater - 1);
+			Theater sTheater = new Theater(selectTheaterId, selectTheater);
 
 			// 로그인 세션에 임시저장된 id값 가져옴
 			String keyId = LoginSession.getCurrentId();
@@ -106,7 +114,7 @@ public class Theater {
 			}
 			reservContext.getData().get(keyId).setTheater(sTheater);
 
-			return selectTheater;
+			return selectTheaterId;
 
 		}
 
@@ -119,10 +127,11 @@ public class Theater {
 		// title에 맞는 극장 get.TheaterName을 받아옴
 		/* sql 수정부분 start */
 		List<String> theaterOption = new ArrayList<>();
+		List<String> theaterIds = new ArrayList<>();
 
 		try {
 			String sql = """
-					select distinct t.t_name
+					select distinct t.theater_id ,t.t_name
 					from movieschedule ms
 					join theater t on ms.theater_id = t.theater_id
 					join movie m on ms.movie_id= m.movie_id
@@ -133,6 +142,7 @@ public class Theater {
 			ResultSet rs = stmt.executeQuery();
 			while (rs.next()) {
 				theaterOption.add(rs.getString("t_name"));
+				theaterIds.add(rs.getString("theater_id"));
 			}
 			rs.close();
 			stmt.close();
@@ -160,14 +170,16 @@ public class Theater {
 		if (inputTheater == 0) {
 			return false;
 		} else {
-			selectTheater = theaterOption.get(inputTheater - 1);
+			String selectTheater = theaterOption.get(inputTheater - 1);
+			String selectTheaterId = theaterIds.get(inputTheater - 1);
 
 			// 로그인 세션에 임시저장된 id값 가져옴
 			String keyId = LoginSession.getCurrentId();
 
 			// 입력받은 값 저장
 
-			Theater sTheater = new Theater(selectTheater);
+			Theater sTheater = new Theater(selectTheaterId, selectTheater);
+
 
 			if (!reservContext.getData().containsKey(keyId)) {
 				reservContext.getData().put(keyId, new Reservation(keyId, null));
