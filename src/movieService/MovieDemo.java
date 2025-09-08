@@ -1,3 +1,4 @@
+
 package movieService;
 
 import java.sql.Connection;
@@ -102,14 +103,16 @@ public class MovieDemo {
 				// 결제
 				Reservation.submitPayment(sc, reservContext, seatManager);
 
-				break;
+// 				break;
 
-			}
+// 			}
+
 
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
 
+
 	}
 
-}
+// }
