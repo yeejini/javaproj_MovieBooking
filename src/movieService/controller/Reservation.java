@@ -4,7 +4,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
 
@@ -122,31 +124,12 @@ public class Reservation {
 		int idx = 1;
 		ArrayList<String> timeList = new ArrayList<>();
 		HashSet<String> addedTime = new HashSet<>(); // 중복 체크용
+		HashMap<String, String> timeToScheduleMap = new HashMap<>(); // time -> schedule_id 매핑
 
 		System.out.println("\n<시간을 선택하세요>");
 
 		// 사용자가 선택한 극장,영화,날짜와 MovieSchedule리스트에 존재하는 것과 매칭시켜
-		// 매칭된 MovieSchedule의 시간+좌석 정보 출력
-//		for (MovieSchedule schedule : MovieSchedule.movieS) {
-//			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater)
-//					&& schedule.getDate().equals(date)) {
-//				// 이미 추가한 시간이면 건너뜀
-//				if (!addedTime.contains(schedule.getTime())) {
-//					// 시간별 key 생성
-//					String seatKey = movie + "_" + theater + "_" + schedule.getTime();
-//					int remainingSeats = Seat.getRemainingSeats(seatKey); // 남은좌석 수
-//
-//					// 시간 리스트
-//					System.out.println(idx + ". " + schedule.getTime() + "(남은좌석 : " + remainingSeats + ")");
-//					// 좌석 리스트
-//
-//					TimeSeatList.add(schedule.getTime());
-//					addedTime.add(schedule.getTime());
-//					idx++;
-//				}
-//
-//			}
-//		}
+
 		try {
 			String sql = "SELECT DISTINCT ms.time, ms.schedule_id " + "FROM MovieSchedule ms "
 					+ "WHERE ms.movie_id = ? AND ms.theater_id = ? AND ms.date = ?";
@@ -167,6 +150,10 @@ public class Reservation {
 						System.out.println(idx + ". " + time + " (남은좌석 : " + remainingSeats + ")");
 						timeList.add(time);
 						addedTime.add(time);
+
+						// schedule_id 매핑 추가
+						timeToScheduleMap.put(time, scheduleId);
+
 						idx++;
 					}
 				}
@@ -192,13 +179,14 @@ public class Reservation {
 		if (choice == 0) {
 			return false;
 		} else {
-			String selectTime = timeList.get(choice - 1); // 선택된 날짜
-			r.setTime(selectTime);
-			// 선택된 시간과 좌석 출력
-			System.out.println("선택된 시간: " + selectTime);
+			String selectedTime = timeList.get(choice - 1); // 사용자가 선택한 시간
+			String selectedScheduleId = timeToScheduleMap.get(selectedTime); // 매핑된 schedule_id
 
-			// 좌석 출력
-			// System.out.println("선택된 좌석: ");
+			r.setTime(selectedTime);
+			r.setScheduleId(selectedScheduleId); // Reservation 객체에 schedule_id 저장
+			System.out.println("선택된 시간: " + selectedTime);
+			System.out.println("저장된 schedule_id: " + selectedScheduleId);
+
 			return true;
 		}
 
@@ -228,32 +216,31 @@ public class Reservation {
 		}
 	}
 
-	public static void submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager) {
-		// 로그인 세션에 임시저장된 id값 가져옴
+	public static void submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager,
+			Connection conn) {
+
 		String keyId = LoginSession.getCurrentId();
+		Reservation r = reservContext.getData().get(keyId);
 
 		System.out.println(Reservation.infoTicket(sc, reservContext));
-
-		System.out.println("예매하시겠습니다?");
+		System.out.println("예매하시겠습니까?");
 
 		while (true) {
 			System.out.println("1. 예");
 			System.out.println("2. 아니오");
 
-			String input = sc.nextLine().trim(); // 입력 한 번만 받음
+			String input = sc.nextLine().trim();
 			int n;
 
 			try {
 				n = Integer.parseInt(input);
 			} catch (NumberFormatException e) {
 				System.out.println("\n숫자를 입력하세요>");
-				continue; // 다시 while문 처음으로
+				continue;
 			}
 
 			if (n == 2) {
-				System.out.println("예매가 취소되었습니다. 안녕히가세요.");
-				// Reservation 객체 가져오기
-				Reservation r = reservContext.getData().get(keyId);
+				System.out.println("예매가 취소되었습니다. 안녕히 가세요.");
 				String key = r.getMovie().getTitle() + "_" + r.getTheater().getTheaterName() + "_" + r.getTime();
 
 				if (r != null) {
@@ -267,15 +254,117 @@ public class Reservation {
 
 				seatManager.cancleSeat(key);
 				break;
+
 			} else if (n == 1) {
-				System.out.println("예매가 완료되었습니다. 안녕히가세요.");
+				System.out.println("예매가 완료되었습니다. 안녕히 가세요.");
+
+				PreparedStatement pstmtSeat = null;
+				PreparedStatement pstmtReserv = null;
+				PreparedStatement pstmtReservSeat = null;
+
+				try {
+					conn.setAutoCommit(false); // 트랜잭션 시작
+
+					// ----------------- 1. Seat 테이블 업데이트 -----------------
+					String[] seats = r.getSeat().split(","); // "A1,A2" -> ["A1","A2"]
+
+					// scheduleId로 screen_id 조회 필요
+					String screenId = null;
+					String getScreenSql = "SELECT screen_id FROM MovieSchedule WHERE schedule_id = ?";
+					try (PreparedStatement pstmtScreen = conn.prepareStatement(getScreenSql)) {
+						pstmtScreen.setString(1, r.getScheduleId());
+						ResultSet rsScreen = pstmtScreen.executeQuery();
+
+						if (rsScreen.next()) {
+							screenId = rsScreen.getString("screen_id");
+						}
+
+						if (screenId == null) {
+							throw new SQLException("해당 scheduleId에 대한 screen_id를 찾을 수 없습니다.");
+						}
+
+						String updateSeatSql = "UPDATE Seat SET is_seats = FALSE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
+						pstmtSeat = conn.prepareStatement(updateSeatSql);
+
+						for (String seatStr : seats) {
+							String row = seatStr.substring(0, 1);
+							int seatNum = Integer.parseInt(seatStr.substring(1));
+							pstmtSeat.setString(1, screenId);
+							pstmtSeat.setString(2, row);
+							pstmtSeat.setInt(3, seatNum);
+							pstmtSeat.addBatch();
+						}
+						pstmtSeat.executeBatch();
+					}
+
+					// ----------------- 2. Reservation 테이블 삽입 -----------------
+					String insertReservSql = "INSERT INTO Reservation (user_id, schedule_id) VALUES (?, ?)";
+					pstmtReserv = conn.prepareStatement(insertReservSql, Statement.RETURN_GENERATED_KEYS);
+					pstmtReserv.setString(1, keyId);
+					pstmtReserv.setString(2, r.getScheduleId());
+					pstmtReserv.executeUpdate();
+
+					ResultSet rs = pstmtReserv.getGeneratedKeys();
+					int reservId = 0;
+					if (rs.next()) {
+						reservId = rs.getInt(1);
+					}
+
+					// ----------------- 3. ReservationSeat 테이블 삽입 -----------------
+					String insertReservSeatSql = "INSERT INTO ReservationSeat (reserv_id, seat_id) VALUES (?, ?)";
+					pstmtReservSeat = conn.prepareStatement(insertReservSeatSql);
+
+					for (String seatStr : seats) {
+						// seat_id 패턴: scheduleId-A1
+						// screen_id 조회 후
+						String seatId = screenId + "-" + seatStr; // S1-A1
+						pstmtReservSeat.setInt(1, reservId);
+						pstmtReservSeat.setString(2, seatId);
+						pstmtReservSeat.addBatch();
+					}
+					pstmtReservSeat.executeBatch();
+
+					conn.commit(); // 트랜잭션 커밋
+
+				} catch (SQLException e) {
+					try {
+						conn.rollback(); // 문제 발생 시 롤백
+						System.out.println("예매 처리 중 오류 발생, 롤백되었습니다.");
+					} catch (SQLException ex) {
+						ex.printStackTrace();
+					}
+					e.printStackTrace();
+				} finally {
+					try {
+						if (pstmtSeat != null) {
+							pstmtSeat.close();
+						}
+					} catch (SQLException e) {
+					}
+					try {
+						if (pstmtReserv != null) {
+							pstmtReserv.close();
+						}
+					} catch (SQLException e) {
+					}
+					try {
+						if (pstmtReservSeat != null) {
+							pstmtReservSeat.close();
+						}
+					} catch (SQLException e) {
+					}
+					try {
+						conn.setAutoCommit(true);
+					} catch (SQLException e) {
+					}
+				}
 
 				break;
+
 			} else {
 				System.out.println("번호를 잘못 입력하셨습니다. 다시 입력하세요>");
 			}
 		}
-
 	}
 
 	// 티켓정보

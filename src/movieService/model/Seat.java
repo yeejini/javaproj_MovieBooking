@@ -6,7 +6,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.Scanner;
 
 import movieService.controller.Context;
@@ -49,12 +48,16 @@ public class Seat {
 		System.out.println();
 		System.out.println("------------------Screen------------------");
 		System.out.println();
+
+		// 열번호 출력
 		System.out.print("       ");
 		for (int i = 0; i < seats.length; i++) { // [1],[2]... 이부분 작성
 			System.out.print(" [ " + (i + 1) + " ] ");
 
 		}
 		System.out.println();
+
+		// 좌석 행 출력
 		for (int i = 0; i < seats.length; i++) {
 			System.out.println();
 			System.out.print(" [ " + (char) (i + 65) + " ] "); // char에서 A=65,B=66,C=67...
@@ -73,36 +76,49 @@ public class Seat {
 		System.out.println("\n------------------------------------------");
 	}
 
-	// 랜덤으로 좌석 채우는 메서드
-	private Integer[][] createRandomSeat(int rows, int cols) {
-		Integer[][] seats = new Integer[rows][cols]; // 좌석 배열 초기화
-		Random random = new Random();
-
-		int preReservedCount = random.nextInt(11); // 0부터 10까지 랜덤으로 예약개수 설정해놓은거
-		int filled = 0; // 예약된 좌석 수
-
-		while (filled < preReservedCount) { // 이미 예약된 좌석수가 랜덤카운트보다 커지기 전까지 반복가능
-			int r = random.nextInt(rows);
-			int c = random.nextInt(cols); // 열과 행을 랜덤으로 받게함
-			if (seats[r][c] == null || seats[r][c] == 0) { // 열과 행이 눌값이거나 0이면(좌석이 안만들어져있거나 빈좌석으로 되어있으면)
-				seats[r][c] = 1; // 1로 채워지고
-				filled++; // filled는 증가하게
+	public Integer[][] getSeatsFromDB(String scheduleId, Connection conn) {
+		final int ROWS = 5; // A~E
+		final int COLS = 5; // 1~5
+		Integer[][] seats = new Integer[ROWS][COLS];
+		for (int i = 0; i < ROWS; i++) {
+			for (int j = 0; j < COLS; j++) {
+				seats[i][j] = 0; // ★ null 방지
 			}
 		}
-		// 나머지 좌석은(위에 랜덤으로 1을 채웠으니 나머지는 null값) 0으로 초기화
-		for (int i = 0; i < rows; i++) {
-			for (int j = 0; j < cols; j++) {
-				if (seats[i][j] == null) {
-					seats[i][j] = 0;
+
+		String sql = "SELECT s.row_num, s.seat_num, "
+				+ "       COALESCE(MAX(CASE WHEN r.reserv_id IS NOT NULL THEN 1 ELSE 0 END),0) AS reserved "
+				+ "FROM Seat s " + "LEFT JOIN ReservationSeat rs ON rs.seat_id = s.seat_id "
+				+ "LEFT JOIN Reservation r ON r.reserv_id = rs.reserv_id "
+				+ "                         AND r.is_canceled = FALSE "
+				+ "                         AND r.schedule_id = ? " + // ★
+				"WHERE s.screen_id = (SELECT ms.screen_id FROM MovieSchedule ms WHERE ms.schedule_id = ?) " + // ★
+				"GROUP BY s.row_num, s.seat_num " + "ORDER BY s.row_num, s.seat_num";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+			pstmt.setString(1, scheduleId); // r.schedule_id = ?
+			pstmt.setString(2, scheduleId); // screen_id subquery
+			try (ResultSet rs = pstmt.executeQuery()) {
+				while (rs.next()) {
+					char rowChar = Character.toUpperCase(rs.getString("row_num").charAt(0));
+					int row = rowChar - 'A'; // A->0, B->1, ...
+					int col = rs.getInt("seat_num") - 1; // 1->0, 5->4
+					int reserved = rs.getInt("reserved");
+
+					if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
+						seats[row][col] = reserved; // 0 or 1
+					}
 				}
 			}
+		} catch (SQLException e) {
+			System.err.println("좌석 조회 실패: " + e.getMessage());
 		}
-
 		return seats;
 	}
 
 	// 좌석 선택 메서드
-	public void selectSeat(Scanner sc, Context<Reservation> reservContext) {
+	public void selectSeat(Scanner sc, Context<Reservation> reservContext, Context<Integer[][]> seatCacheContext,
+			Connection conn) {
 
 		clearSeats(); // 좌석 정보 초기화
 
@@ -110,15 +126,27 @@ public class Seat {
 		String keyId = LoginSession.getCurrentId();
 		Reservation reserv = reservContext.getData().get(keyId);
 
-		// 사용자가 선택한 극장, 영화이름, 시간대 키값으로 사용
-		String key = reserv.getMovie().getTitle() + "_" + reserv.getTheater().getTheaterName() + "_" + reserv.getTime();
+		// 사용자가 앞에서 선택한 영화 스케줄의 Id가져오기
+		String scheduleId = reserv.getScheduleId();
+		System.out.println("현재스케줄 ID:" + scheduleId);
 
-		Integer[][] seats = context.getData().get(key);// 기존 배열 가져오기
-		if (seats == null) { // null값이면
-			seats = createRandomSeat(5, 5); // 랜덤seat받아와서
-			context.getData().put(key, seats);// 그 값 저장
+		// 사용자+스케줄 단위의 캐시 키
+		String cacheKey = keyId + ":" + scheduleId;
+
+		// 캐시 조회
+		Integer[][] seats = seatCacheContext.getData().get(cacheKey);
+
+		// 캐시 미스면 DB에서 읽기
+		if (seats == null) {
+			// 없으면 DB에서 불러오기
+			seats = getSeatsFromDB(scheduleId, conn);
+
+			// 캐시에 저장
+			seatCacheContext.getData().put(cacheKey, seats);
 		}
-		printSeats(key, seats); // 랜덤메서드 반영한 좌석 출력
+
+		// selectSeat 내부
+		printSeats(cacheKey, seats);
 
 		int peonum = reserv.getPeople(); // 선택한 인원수 받아오기
 		String strRow; // 입력받은 행이름
@@ -135,6 +163,10 @@ public class Seat {
 			while (true) {
 				System.out.println("예약하실 좌석의 행을 입력하세요(A~E) : ");
 				strRow = sc.nextLine();
+				if (strRow.isEmpty()) {
+					continue;
+				}
+
 				// 공백제거 후 첫번재 글자만 뽑아서 캐릭터로 전환 , A1이렇게 입력할수도 있으니까
 				charRow = Character.toUpperCase(strRow.trim().charAt(0));
 				if (charRow < 65 || charRow > 69) { // A~E까지
@@ -152,11 +184,14 @@ public class Seat {
 				}
 				// 좌석 예약 가능 여부 확인
 				if (seats[intRow][Col - 1] == null || seats[intRow][Col - 1] == 0) {
+//					좌석 예약
 					seats[intRow][Col - 1] = 1;
 
 					selectedSeat = "" + charRow + Col;
 					this.addSeat(selectedSeat);// 선택한 좌석 리스트에 추가
-					context.getData().put(key, seats); // 좌석 정보 Context에 저장
+//					context.getData().put(key, seats); // 좌석 정보 Context에 저장
+					// 캐시 갱신
+					seatCacheContext.getData().put(cacheKey, seats);
 					reserv.setSeat(String.join(",", getSeat())); // reservation에 저장
 
 					break;
@@ -167,7 +202,8 @@ public class Seat {
 			}
 		}
 		System.out.println();
-		printSeats(key, seats);
+//		printSeats(key, seats);
+		printSeats(cacheKey, seats);
 		System.out.println(String.join(",", getSeat()) + "이 선택되셨습니다.\n"); // 선택 확인하기 위해 다시 출력
 	}
 
@@ -210,8 +246,6 @@ public class Seat {
 		} catch (SQLException e) {
 			System.err.println("남은 좌석 조회 중 오류 발생: " + e.getMessage());
 		}
-
-		// 오류 발생 시 0 반환
 		return 0;
 	}
 
