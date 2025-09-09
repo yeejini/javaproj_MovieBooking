@@ -428,8 +428,25 @@ public class Reservation {
 		String keyId = LoginSession.getCurrentId();
 
 		String sql = """
-
+				select r.reserv_id, u.name as user_name, t.t_name, m.title, ms.date, ms.time,ms.screen_id, 
+				group_concat(se.row_num, se.seat_num) as seat, count(*) as people
+				from reservation r
+				join user u on r.user_id = u.user_id
+				join movieschedule ms on r.schedule_id = ms.schedule_id
+				join theater t on ms.theater_id = t.theater_id
+				join movie m on ms.movie_id = m.movie_id
+				join reservationseat rs on r.reserv_id = rs.reserv_id
+				join seat se on rs.seat_id = se.seat_id
+				where r.user_id = ?
+				group by r.reserv_id, u.name, t.t_name, m.title, ms.date, ms.time,ms.screen_id
 				""";
+		
+		try (PreparedStatement stmt = conn.prepareStatement(sql)){
+			stmt.set
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
 //		Reservation r = reservContext.getData().get(keyId);
 //
 //		if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
