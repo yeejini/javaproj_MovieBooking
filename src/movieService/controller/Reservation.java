@@ -8,6 +8,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -501,16 +502,15 @@ public class Reservation {
 	}
 
 	// 티켓조회
+	// 티켓조회 및 선택적 취소
 	public static void issueTicket(Scanner sc, Connection conn) {
-		// 로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
-		// 1. 로그인 세션 확인
+
 		if (keyId == null || keyId.isEmpty()) {
 			System.out.println("로그인 정보가 없습니다. 먼저 로그인해주세요.");
 			return;
 		}
 
-		// 2. DB 연결 확인
 		if (conn == null) {
 			System.out.println("DB 연결이 없습니다.");
 			return;
@@ -518,7 +518,7 @@ public class Reservation {
 
 		String sql = """
 				    select r.reserv_id, u.name as user_name, t.t_name, m.title, ms.date, ms.time, ms.screen_id,
-				           group_concat(concat(se.row_num, se.seat_num)SEPARATOR ',') as seats, count(*) as people
+				           group_concat(concat(se.row_num, se.seat_num) SEPARATOR ',') as seats, count(*) as people
 				    from reservation r
 				    join user u on r.user_id = u.user_id
 				    join movieschedule ms on r.schedule_id = ms.schedule_id
@@ -533,160 +533,156 @@ public class Reservation {
 		try (PreparedStatement stmt = conn.prepareStatement(sql)) {
 			stmt.setString(1, keyId);
 			ResultSet rs = stmt.executeQuery();
-			if (!rs.next()) {
+
+			List<Integer> reservIds = new ArrayList<>();
+			List<String> ticketInfos = new ArrayList<>();
+			int index = 1;
+
+			while (rs.next()) {
+				int reservId = rs.getInt("reserv_id");
+				reservIds.add(reservId);
+
+				String userName = rs.getString("user_name") != null ? rs.getString("user_name") : "";
+				String theaterName = rs.getString("t_name") != null ? rs.getString("t_name") : "";
+				String movieTitle = rs.getString("title") != null ? rs.getString("title") : "";
+				String date = rs.getString("date") != null ? rs.getString("date") : "";
+				String time = rs.getString("time") != null ? rs.getString("time") : "";
+				String screenId = rs.getString("screen_id") != null ? rs.getString("screen_id") : "";
+				String seats = rs.getString("seats") != null ? rs.getString("seats") : "";
+				int people = rs.getInt("people");
+
+				String ticketInfo = """
+						    <%s 님의 예약 정보입니다.>
+						    -------------------------------
+						    예약자 : %s
+						    극장명 : %s
+						    영화명 : %s
+						    상영관 : %s
+						    날짜   : %s
+						    시간   : %s
+						    인원 수 : %d
+						    좌석번호: %s
+						""".formatted(userName, userName, theaterName, movieTitle, screenId, date, time, people, seats);
+				ticketInfos.add(ticketInfo);
+				index++;
+			}
+
+			if (ticketInfos.isEmpty()) {
 				System.out.println("예매 정보가 없습니다.");
 				return;
 			}
-			// 안전하게 컬럼 읽기
-			int reservId = rs.getInt("reserv_id");
-			String userName = rs.getString("user_name") != null ? rs.getString("user_name") : ""; // **변경: null 처리**
-			String theaterName = rs.getString("t_name") != null ? rs.getString("t_name") : ""; // **변경: null
-																								// 처리**
-			String movieTitle = rs.getString("title") != null ? rs.getString("title") : ""; // **변경: null
-																							// 처리**
-			String date = rs.getString("date") != null ? rs.getString("date") : ""; // **변경: null 처리**
-			String time = rs.getString("time") != null ? rs.getString("time") : ""; // **변경: null 처리**
-			String screenId = rs.getString("screen_id") != null ? rs.getString("screen_id") : ""; // **변경: null 처리**
-			String seats = rs.getString("seats") != null ? rs.getString("seats") : ""; // **변경: null 처리**
-			int people = rs.getInt("people"); // **변경: count(*)로 int 바로 가져오기**
 
 			// 티켓 출력
-			String ticketInfo = """
-					    <%s 님의 예약 정보입니다.>
-					    -------------------------------
-					    예약자 : %s
-					    극장명 : %s
-					    영화명 : %s
-					    상영관 : %s
-					    날짜   : %s
-					    시간   : %s
-					    인원 수 : %d
-					    좌석번호: %s
-					""".formatted(userName, userName, theaterName, movieTitle, screenId, date, time, people, seats);
+			System.out.println("=== 예매 티켓 목록 ===");
 
-			System.out.println(ticketInfo);
+			for (int i = 0; i < ticketInfos.size(); i++) {
+				if (ticketInfos.size() > 1) {
+					System.out.println("         <" + (i + 1) + "번째 티켓 정보>");
+				}
+				System.out.println(ticketInfos.get(i));
+				System.out.println(); // 티켓 사이 여백
+			}
 
-			// 취소 여부 확인
-			System.out.println("예매를 취소하시려면 0번을 선택하세요. (다른 번호 입력 시 유지됩니다.)");
+			// ticketInfos.forEach(System.out::println);
+			System.out.println("번호를 선택하세요.");
+			if (ticketInfos.size() > 1) {
+				System.out.println("(0번: 예매 유지, 1번 이상: 해당 번호 티켓 취소)");
+			} else {
+				System.out.println("(0번: 예매 유지, 1번: 해당 티켓 예매 취소)");
+			}
 			System.out.print("선택> ");
 			int choice;
 			try {
-				choice = Integer.parseInt(sc.nextLine());
+				choice = Integer.parseInt(sc.nextLine().trim());
 			} catch (NumberFormatException e) {
-				System.out.println("잘못된 입력입니다. 예매를 유지합니다.");
+				System.out.println("잘못된 입력입니다. 예매 유지합니다.");
 				return;
 			}
 
 			if (choice == 0) {
-				try {
-					conn.setAutoCommit(false);
-
-					// 1.reservation seat 삭제
-					String delReservSeat = "delete from reservationseat where reserv_id = ?";
-					try (PreparedStatement ps1 = conn.prepareStatement(delReservSeat)) {
-						ps1.setInt(1, reservId);
-						ps1.executeUpdate(); // **
-					}
-
-					// 2. reservation 삭제
-					String delReserve = "delete from reservation where reserv_id = ?";
-					try (PreparedStatement ps2 = conn.prepareStatement(delReserve)) {
-						ps2.setInt(1, reservId);
-						ps2.executeUpdate();
-					}
-
-					// 3. seat원복(is_seat== true)
-					String[] seatArr = seats.isEmpty() ? new String[0] : seats.split(",");
-					String updateSeat = "UPDATE Seat SET is_seats = TRUE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
-					try (PreparedStatement ps3 = conn.prepareStatement(updateSeat)) {
-						for (String s : seatArr) { // **
-							if (s.isEmpty()) {
-								continue; // 안전하게 skip
-							}
-							String row = s.substring(0, 1); // **
-							int seatNum = Integer.parseInt(s.substring(1)); // **
-							ps3.setString(1, screenId);
-							ps3.setString(2, row);
-							ps3.setInt(3, seatNum);
-							ps3.addBatch(); // **
-						}
-						ps3.executeBatch(); // **
-					}
-					conn.commit();// **
-					System.out.println("예매가 취소되었습니다.");
-
-				} catch (SQLException e) {
-					try {
-						conn.rollback();
-						System.out.println("예매 취소 중 오류 발생");
-					} catch (SQLException e2) {
-						e2.printStackTrace();
-					}
-					e.printStackTrace();
-				} finally { // **
-					try {
-						conn.setAutoCommit(true);
-					} catch (SQLException e) {
-						e.printStackTrace();
-					}
-				}
-			} else {
 				System.out.println("예매를 유지합니다.");
+				return;
+			} else if (choice > 0 && choice <= reservIds.size()) {
+				int cancelReservId = reservIds.get(choice - 1);
+				cancelReservation(cancelReservId, conn); // 실제 취소 처리 함수 호출
+			} else {
+				System.out.println("잘못된 번호입니다. 예매 유지합니다.");
 			}
 
 		} catch (SQLException e) {
-			System.out.println("티켓 조회 중 오류 발생 : " + e.getMessage());
+			System.out.println("티켓 조회 중 오류 발생: " + e.getMessage());
 			e.printStackTrace();
 		}
-//		Reservation r = reservContext.getData().get(keyId);
-//
-//		if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
-//			System.out.println("티켓 정보가 없습니다.");
-//			return;
-//		}
-//
-//		// 예매 정보 출력
-//		System.out.println(infoTicket(sc, reservContext));
-//
-//		// 취소 여부 확인
-//		System.out.println("예매를 취소하시려면 0번을 선택하세요. (다른 번호 입력 시 유지됩니다.)");
-//		System.out.print("선택> ");
-//
-//		try {
-//			int choice = Integer.parseInt(sc.nextLine());
-//
-//			if (choice == 0) {
-//				String key = r.getMovie().getTitle() + "_" + r.getTheater().getTheaterName() + "_" + r.getTime();
-//
-//				// 예약 객체 초기화
-//				r.setMovie(null);
-//				r.setTheater(null);
-//				r.setDate(null);
-//				r.setTime(null);
-//				r.setPeople(0);
-//				r.setSeat(null);
-//
-//				// 좌석 취소
-//				seatManager.cancleSeat(key);
-//
-//				System.out.println("예매가 취소되었습니다.");
-//			} else {
-//				System.out.println("예매를 유지합니다.");
-//			}
-//		} catch (NumberFormatException e) {
-//			System.out.println("잘못된 입력입니다. 예매를 유지합니다.");
-//		}
-////	
-//		
-//		try {
-//			int choice = Integer.parseInt(sc.nextLine());
-//			if(choice == 0) {
-//				
-//			}
-//		} catch (Exception e) {
-//			// TODO: handle exception
-//		}
-//
-//}
+	}
+
+	// reservation 취소 처리 함수
+	private static void cancelReservation(int reservId, Connection conn) {
+		try {
+			conn.setAutoCommit(false);
+
+			// 1. reservation seat 삭제
+			String delReservSeat = "DELETE FROM reservationseat WHERE reserv_id = ?";
+			try (PreparedStatement ps1 = conn.prepareStatement(delReservSeat)) {
+				ps1.setInt(1, reservId);
+				ps1.executeUpdate();
+			}
+
+			// 2. reservation 삭제
+			String delReserve = "DELETE FROM reservation WHERE reserv_id = ?";
+			try (PreparedStatement ps2 = conn.prepareStatement(delReserve)) {
+				ps2.setInt(1, reservId);
+				ps2.executeUpdate();
+			}
+
+			// 3. seat 원복(is_seats = TRUE)
+			String selectSeats = """
+					    SELECT rs.seat_id, ms.screen_id
+					    FROM reservationseat rs
+					    JOIN movieschedule ms ON rs.reserv_id = ?
+					""";
+			try (PreparedStatement ps3 = conn.prepareStatement(selectSeats)) {
+				ps3.setInt(1, reservId);
+				ResultSet rs = ps3.executeQuery();
+				List<String> seatArr = new ArrayList<>();
+				String screenId = "";
+				while (rs.next()) {
+					seatArr.add(rs.getString("seat_id"));
+					screenId = rs.getString("screen_id");
+				}
+
+				String updateSeat = "UPDATE Seat SET is_seats = TRUE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
+				try (PreparedStatement ps4 = conn.prepareStatement(updateSeat)) {
+					for (String s : seatArr) {
+						if (s == null || s.isEmpty()) {
+							continue;
+						}
+						String row = s.substring(s.indexOf('-') + 1, s.indexOf('-') + 2); // "S1-A1" -> "A"
+						int seatNum = Integer.parseInt(s.substring(s.indexOf('-') + 2)); // "1"
+						ps4.setString(1, screenId);
+						ps4.setString(2, row);
+						ps4.setInt(3, seatNum);
+						ps4.addBatch();
+					}
+					ps4.executeBatch();
+				}
+			}
+
+			conn.commit();
+			System.out.println("선택한 티켓이 취소되었습니다.");
+		} catch (SQLException e) {
+			try {
+				conn.rollback();
+				System.out.println("티켓 취소 중 오류 발생, 롤백되었습니다.");
+			} catch (SQLException ex) {
+				ex.printStackTrace();
+			}
+			e.printStackTrace();
+		} finally {
+			try {
+				conn.setAutoCommit(true);
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 }
