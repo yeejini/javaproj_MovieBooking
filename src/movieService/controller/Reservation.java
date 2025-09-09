@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 
 import movieService.model.Movie;
 import movieService.model.Seat;
@@ -230,7 +231,6 @@ public class Reservation {
 	public static void submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager,
 			Context<Integer[][]> seatCacheContext, Connection conn) {
 
-
 		String keyId = LoginSession.getCurrentId();
 		Reservation r = reservContext.getData().get(keyId);
 
@@ -301,24 +301,45 @@ public class Reservation {
 							throw new SQLException("해당 scheduleId에 대한 screen_id를 찾을 수 없습니다.");
 						}
 
-						// 2. 좌석 잠금 (SELECT ... FOR UPDATE)
-						String lockSeatSql = "SELECT * FROM Seat WHERE screen_id = ? AND row_num = ? AND seat_num = ? FOR UPDATE";
+						// 2. 여러 좌석 한 번에 잠금
+						StringBuilder placeholders = new StringBuilder();
+						for (int i = 0; i < seats.length; i++) {
+							placeholders.append("(?, ?)");
+							if (i < seats.length - 1) {
+								placeholders.append(", ");
+							}
+						}
+						String lockSeatSql = "SELECT * FROM Seat WHERE screen_id = ? AND (row_num, seat_num) IN ("
+								+ placeholders + ") FOR UPDATE";
+
 						try (PreparedStatement pstmtLock = conn.prepareStatement(lockSeatSql)) {
+							pstmtLock.setString(1, screenId);
+							int index = 2;
 							for (String seatStr : seats) {
 								String row = seatStr.substring(0, 1);
 								int seatNum = Integer.parseInt(seatStr.substring(1));
+								pstmtLock.setString(index++, row);
+								pstmtLock.setInt(index++, seatNum);
+							}
 
-								pstmtLock.setString(1, screenId);
-								pstmtLock.setString(2, row);
-								pstmtLock.setInt(3, seatNum);
+							ResultSet rsLock = pstmtLock.executeQuery();
 
-								// 좌석 잠금 시도
-								ResultSet rsLock = pstmtLock.executeQuery();
-								if (!rsLock.next()) {
-									throw new SQLException("좌석 정보를 찾을 수 없습니다: " + seatStr);
-								}
+							Set<String> lockedSeats = new HashSet<>();
+							while (rsLock.next()) {
+								String row = rsLock.getString("row_num");
+								int num = rsLock.getInt("seat_num");
+								lockedSeats.add(row + num);
 								if (!rsLock.getBoolean("is_seats")) {
-									throw new SQLException("이미 예약된 좌석입니다: " + seatStr);
+									System.out.println("이미 예약된 좌석입니다: " + row + num);
+									seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
+									return;
+								}
+							}
+
+							// DB에 없는 좌석 체크
+							for (String seatStr : seats) {
+								if (!lockedSeats.contains(seatStr)) {
+									throw new SQLException("좌석 정보를 찾을 수 없습니다: " + seatStr);
 								}
 							}
 						}

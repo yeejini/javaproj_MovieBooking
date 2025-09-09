@@ -227,6 +227,72 @@ public class Seat {
 		printSeats(cacheKey, seats);
 		System.out.println(String.join(",", getSeat()) + "이 선택되셨습니다.\n"); // 선택 확인하기 위해 다시 출력
 	}
+//	public void selectSeat(Scanner sc, Context<Reservation> reservContext, Context<Integer[][]> seatCacheContext,
+//			Connection conn) {
+//
+//		clearSeats(); // 좌석 정보 초기화
+//
+//		String keyId = LoginSession.getCurrentId();
+//		Reservation reserv = reservContext.getData().get(keyId);
+//
+//		String scheduleId = reserv.getScheduleId();
+//		System.out.println("현재스케줄 ID:" + scheduleId);
+//
+//		String cacheKey = keyId + ":" + scheduleId;
+//
+//		while (true) { // 재선택 루프
+//// DB에서 최신 좌석 정보 불러오기
+//			Integer[][] seats = getSeatsFromDB(scheduleId, conn);
+//			seatCacheContext.getData().put(cacheKey, seats);
+//
+//			printSeats(cacheKey, seats);
+//
+//			int peonum = reserv.getPeople();
+//			String selectedSeat = "";
+//
+//			for (int i = 0; i < peonum; i++) {
+//				if (peonum != 1) {
+//					System.out.println("\n<" + (i + 1) + "번째 좌석선택>");
+//				}
+//				while (true) {
+//					System.out.println("예약하실 좌석의 행을 입력하세요(A~E) : ");
+//					String strRow = sc.nextLine();
+//					if (strRow.isEmpty()) {
+//						continue;
+//					}
+//
+//					char charRow = Character.toUpperCase(strRow.trim().charAt(0));
+//					if (charRow < 'A' || charRow > 'E') {
+//						System.out.println("선택할 수 없는 행입니다.");
+//						continue;
+//					}
+//					int intRow = charRow - 'A';
+//
+//					System.out.println("예약하실 좌석의 열을 입력하세요(1~5) : ");
+//					int col = Integer.parseInt(sc.nextLine());
+//					if (col < 1 || col > 5) {
+//						System.out.println("선택할 수 없는 열입니다.");
+//						continue;
+//					}
+//
+//					if (seats[intRow][col - 1] == null || seats[intRow][col - 1] == 0) {
+//						seats[intRow][col - 1] = 1;
+//						selectedSeat = "" + charRow + col;
+//						this.addSeat(selectedSeat);
+//						break;
+//					} else {
+//						System.out.println("이미 예약된 좌석입니다.\n");
+//					}
+//				}
+//			}
+//
+//			reserv.setSeat(String.join(",", getSeat()));
+//
+//			printSeats(cacheKey, seats);
+//			System.out.println(String.join(",", getSeat()) + "이 선택되셨습니다.\n");
+//			break; // 정상 선택 시 루프 종료
+//		}
+//	}
 
 	// 특정 schedule_id 기준 남은 좌석 수 구하기
 	public static int getRemainingSeats(String scheduleId, Connection conn) {
