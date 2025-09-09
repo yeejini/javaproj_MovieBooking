@@ -120,11 +120,11 @@ public class Seat {
 	public void selectSeat(Scanner sc, Context<Reservation> reservContext, Context<Integer[][]> seatCacheContext,
 			Connection conn) {
 
-		clearSeats(); // 좌석 정보 초기화
-
 		// * 로그인세션에서 아이디 값 받아오기 -> 그 아이디값을 리졀베이션에 넣어서 선택한 영화,극장,시간 꺼내옴*/
 		String keyId = LoginSession.getCurrentId();
 		Reservation reserv = reservContext.getData().get(keyId);
+		reserv.setSeat(null); // 이전 선택 좌석 초기화
+		clearSeats(); // 좌석 정보 초기화
 
 		// 사용자가 앞에서 선택한 영화 스케줄의 Id가져오기
 		String scheduleId = reserv.getScheduleId();
@@ -214,6 +214,7 @@ public class Seat {
 					}
 
 					reserv.setSeat(String.join(",", getSeat())); // reservation에 저장
+					System.out.println("seat 선택 후 Reservation seat: " + reserv.getSeat()); // debug
 
 					break;
 				} else {
