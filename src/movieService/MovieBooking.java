@@ -97,7 +97,7 @@ public class MovieBooking {
 
 			switch (mainMenu) {
 			case "1" -> { // 티켓 조회
-				Reservation.issueTicket(sc, reservContext, seatManager);
+				Reservation.issueTicket(sc, conn);
 				// System.out.println(ticketInfo);
 
 			}
