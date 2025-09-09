@@ -20,9 +20,8 @@ public class Theater {
 //
 //	}
 	static String selectTheater;
+	private String theaterId;
 	private String theaterName;
-
-	private String theaterId; // DB PK
 
 	void setTheaterName(String theaterName) {
 		this.theaterName = theaterName;
@@ -108,9 +107,6 @@ public class Theater {
 			if (!reservContext.getData().containsKey(keyId)) {
 				reservContext.getData().put(keyId, new Reservation(keyId, null));
 			}
-
-			System.out.println(selectTheaterId);
-			System.out.println(selectTheater);
 			reservContext.getData().get(keyId).setTheater(sTheater);
 
 			return selectTheaterId;
