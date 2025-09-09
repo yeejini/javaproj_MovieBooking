@@ -217,8 +217,9 @@ public class Reservation {
 	}
 
 	public static void submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager,
-			Connection conn) {
-		// 로그인 세션에 임시저장된 id값 가져옴
+			Context<Integer[][]> seatCacheContext, Connection conn) {
+
+
 		String keyId = LoginSession.getCurrentId();
 		Reservation r = reservContext.getData().get(keyId);
 
@@ -332,6 +333,21 @@ public class Reservation {
 					pstmtReservSeat.executeBatch();
 
 					conn.commit(); // 트랜잭션 커밋
+					// 사용자+스케줄 단위의 캐시 키
+
+					conn.commit(); // 트랜잭션 커밋
+
+					// 사용자+스케줄 단위의 캐시 키
+					String cacheKey = keyId + ":" + r.getScheduleId();
+					System.out.println("삭제할 캐시 키: " + cacheKey);
+					System.out.println("삭제 전 캐시 존재 여부: " + seatCacheContext.getData().containsKey(cacheKey));
+
+					// 캐시 삭제
+					seatCacheContext.getData().remove(cacheKey);
+
+					System.out.println("삭제 후 캐시 존재 여부: " + seatCacheContext.getData().containsKey(cacheKey));
+
+					// 배열 초기화는 필요 없음, 캐시 삭제만으로 다음 사용자는 DB 기준 좌석을 조회
 
 				} catch (SQLException e) {
 					try {

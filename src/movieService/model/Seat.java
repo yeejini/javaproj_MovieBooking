@@ -134,16 +134,23 @@ public class Seat {
 		String cacheKey = keyId + ":" + scheduleId;
 
 		// 캐시 조회
-		Integer[][] seats = seatCacheContext.getData().get(cacheKey);
+		Integer[][] cachedSeats = seatCacheContext.getData().get(cacheKey);
 
-		// 캐시 미스면 DB에서 읽기
-		if (seats == null) {
-			// 없으면 DB에서 불러오기
+		// 항상 새로운 배열을 생성
+		Integer[][] seats;
+		if (cachedSeats == null) {
+			// DB에서 불러오기
 			seats = getSeatsFromDB(scheduleId, conn);
-
-			// 캐시에 저장
-			seatCacheContext.getData().put(cacheKey, seats);
+		} else {
+			// 캐시가 있으면 기존 배열 복사
+			seats = new Integer[cachedSeats.length][cachedSeats[0].length];
+			for (int i = 0; i < cachedSeats.length; i++) {
+				seats[i] = cachedSeats[i].clone();
+			}
 		}
+
+		// 캐시에 새 배열 저장 (참조 분리)
+		seatCacheContext.getData().put(cacheKey, seats);
 
 		// selectSeat 내부
 		printSeats(cacheKey, seats);
@@ -189,9 +196,23 @@ public class Seat {
 
 					selectedSeat = "" + charRow + Col;
 					this.addSeat(selectedSeat);// 선택한 좌석 리스트에 추가
-//					context.getData().put(key, seats); // 좌석 정보 Context에 저장
-					// 캐시 갱신
-					seatCacheContext.getData().put(cacheKey, seats);
+
+					// 캐시 갱신 (참조 분리)
+					Integer[][] newCacheSeats = new Integer[seats.length][seats[0].length];
+					for (int r = 0; r < seats.length; r++) {
+						newCacheSeats[r] = seats[r].clone();
+					}
+					seatCacheContext.getData().put(cacheKey, newCacheSeats);
+
+					// 선택 좌석 출력
+					System.out.println("캐시에 저장된 좌석: ");
+					for (int r = 0; r < seats.length; r++) {
+						for (int c = 0; c < seats[r].length; c++) {
+							System.out.print(seats[r][c] + " ");
+						}
+						System.out.println();
+					}
+
 					reserv.setSeat(String.join(",", getSeat())); // reservation에 저장
 
 					break;
@@ -207,26 +228,6 @@ public class Seat {
 		System.out.println(String.join(",", getSeat()) + "이 선택되셨습니다.\n"); // 선택 확인하기 위해 다시 출력
 	}
 
-	// 남은좌석 출력하는 메서드
-//	public static int getRemainingSeats(String key) {
-//		if(context == null) return 0; //context에 정보 저장안되어있으면 0리턴
-//
-//			Integer[][] seats = context.getData().get(key);
-//			//배열이 없으면 초기화
-//			if(seats == null){
-//				Seat s = new Seat(context);
-//				seats= s.createRandomSeat(5, 5);//랜덤으로 몇개 예매
-//				context.getData().put(key, seats); //context에 저장
-//			}
-//
-//			int remaining = 0; // 남은 좌석 수 
-//			for (int i = 0; i < seats.length; i++) {
-//				for (int j = 0; j < seats[i].length; j++) {
-//					if (seats[i][j] == null || seats[i][j] == 0) remaining++; //좌석이 null이거나 0이면 비어있는 좌석이니 remaining++
-//				}
-//			}
-//			return remaining;
-//		}
 	// 특정 schedule_id 기준 남은 좌석 수 구하기
 	public static int getRemainingSeats(String scheduleId, Connection conn) {
 		String sql = "SELECT COUNT(*) AS remaining_seats " + "FROM Seat s " + "WHERE s.screen_id = ( "
