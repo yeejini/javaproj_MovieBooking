@@ -216,7 +216,7 @@ public class MovieBooking {
 			}
 
 			case PAYMENT -> {
-				Reservation.submitPayment(sc, reservContext, seatManager, conn);
+				Reservation.submitPayment(sc, reservContext, seatManager, seatCacheContext, conn);
 				step = Step.EXIT;
 			}
 			}
