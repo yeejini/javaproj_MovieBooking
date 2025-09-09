@@ -97,7 +97,7 @@ public class MovieBooking {
 
 			switch (mainMenu) {
 			case "1" -> { // 티켓 조회
-				Reservation.issueTicket(sc, reservContext, seatManager, conn);
+				Reservation.issueTicket(sc, conn);
 				// System.out.println(ticketInfo);
 
 			}
@@ -129,6 +129,7 @@ public class MovieBooking {
 		Step step = movieFirst ? Step.MOVIE : Step.THEATER;
 		String theaterId = "";
 		String movieId = "";
+		Context<Integer[][]> seatCacheContext = new Context<>();
 
 		while (step != Step.EXIT) {
 			switch (step) {
@@ -210,7 +211,7 @@ public class MovieBooking {
 			}
 
 			case SEAT -> {
-				seatManager.selectSeat(sc, reservContext);
+				seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
 				step = Step.PAYMENT;
 			}
 
