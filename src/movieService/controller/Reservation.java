@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Scanner;
 
-import movieService.data.MovieSchedule;
 import movieService.model.Movie;
 import movieService.model.Seat;
 import movieService.model.Theater;
 import movieService.model.User;
 
 public class Reservation {
+
 	// 객체 타입
 	private User user;
 	private Movie movie;
@@ -228,13 +228,22 @@ public class Reservation {
 		}
 	}
 
-	public static void submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager) {
+	public static void submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager,
+			Connection conn) {
 		// 로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
+		Reservation r = reservContext.getData().get(keyId);
 
-		System.out.println(Reservation.infoTicket(sc, reservContext));
+		if (r == null) {
+			System.out.println("예매 정보가 없습니다.");
+			return;
+		}
+
+		System.out.println(Reservation.infoTicket(sc, reservContext, conn));
 
 		System.out.println("예매하시겠습니다?");
+		System.out.println("1. 예");
+		System.out.println("2. 아니오");
 
 		while (true) {
 			System.out.println("1. 예");
@@ -252,8 +261,6 @@ public class Reservation {
 
 			if (n == 2) {
 				System.out.println("예매가 취소되었습니다. 안녕히가세요.");
-				// Reservation 객체 가져오기
-				Reservation r = reservContext.getData().get(keyId);
 				String key = r.getMovie().getTitle() + "_" + r.getTheater().getTheaterName() + "_" + r.getTime();
 
 				if (r != null) {
@@ -275,59 +282,105 @@ public class Reservation {
 				System.out.println("번호를 잘못 입력하셨습니다. 다시 입력하세요>");
 			}
 		}
-
 	}
 
 	// 티켓정보
-	public static String infoTicket(Scanner sc, Context<Reservation> reservContext) {
+	public static String infoTicket(Scanner sc, Context<Reservation> reservContext, Connection conn) {
 		// 로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
 		Reservation r = reservContext.getData().get(keyId);
-		// Reservation 객체나 필드가 null인지 체크
-		if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
+		// Reservation 객체 자체는 scheduleId, keyId 정도만 있으면 됨
+		if (r == null || r.keyId == null) {
 			return "티켓 정보가 없습니다.";
 		}
-		String name = r.getUser().getName();
-		String theater = r.getTheater().getTheaterName();
-		String movie = r.getMovie().getTitle();
-		String date = r.getMovie().getDate();
-		String time = r.getTime();
-
-		String seat = r.getSeat();
+		// DB 조회 실패나 조건 불일치 시 기본 메시지를 갖도록 하기 위해
+		String reservInfo = "티켓 정보가 없습니다.";
+//		String name = r.getUser().getName();
+//		String theater = r.getTheater().getTheaterName();
+//		String movie = r.getMovie().getTitle();
+//		String date = r.getMovie().getDate();
+//		String time = r.getTime();
+//
+//		String seat = r.getSeat();
 
 		// MovieSchedule 리스트에서 매칭되는 schedule 찾기
-		String screen = ""; // 기본값
-		for (MovieSchedule schedule : MovieSchedule.movieS) {
-			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater)
-					&& schedule.getDate().equals(date) && schedule.getTime().equals(time)) {
-				screen = schedule.getScreen(); // 상영관 정보 가져오기
-				break;
+//		for (MovieSchedule schedule : MovieSchedule.movieS) {
+//			if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater)
+//					&& schedule.getDate().equals(date) && schedule.getTime().equals(time)) {
+//				screen = schedule.getScreen(); // 상영관 정보 가져오기
+//				break;
+//			}
+//		}
+
+		try {
+			String sql = """
+					select u.name, t.t_name , m.title , s.s_name, ms.date, ms.time, rs_s.row_num, rs_s.seat_num
+					from Reservation r
+					join User u on r.user_id = u.user_id
+					join movieschedule ms on r.schedule_id = ms.schedule_id
+					join theater t on ms.theater_id = t.theater_id
+					join movie m on ms.movie_id = m.movie_id
+					join screen s on ms.screen_id = s.screen_id
+					left join reservationseat rs on r.reserv_id = rs.reserv_id
+					left join seat rs_s on rs.seat_id = rs_s.seat_id
+					where r.schedule_id = ?
+					""";
+			try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+				stmt.setString(1, r.getScheduleId()); // 스케줄로 조회
+				ResultSet rs = stmt.executeQuery();
+
+				// 여러 좌석(row+seat)을 한 줄 문자열로 이어 붙이기 위해 사용
+				StringBuilder seatBuilder = new StringBuilder();
+				// db에서 한 번에 가져올 각 컬럼값을 저장할 임시변수
+				String userName = "", theater = "", movie = "", screen = "", date = "", time = "";
+
+				while (rs.next()) {
+					// db에서 모든 값 가져오기
+					userName = rs.getString("user_name");
+					theater = rs.getString("t_name");
+					movie = rs.getString("title");
+					screen = rs.getString("s_name");
+					date = rs.getString("date");
+					time = rs.getString("time");
+
+					// 이어붙이기 위해 안에서 선언
+					String row = rs.getString("row_num");
+					String seatNum = rs.getString("seat_num");
+
+					// 좌석 값이 null이면 무시
+					if (row != null && seatNum != null) {
+						seatBuilder.append(row).append(seatNum).append(" ");
+					}
+				}
+				if (!userName.isEmpty()) {
+					// 좌석 정보
+					reservInfo = """
+							    <%s 님의 예약 정보입니다.>
+							-------------------------------
+							예약자 : %s
+							극장명 : %s
+							영화명 : %s
+							상영관 : %s
+							날짜   : %s
+							시간   : %s
+							인원 수 : %d
+							좌석번호: %s
+
+
+							    """.formatted(userName, userName, theater, movie, screen, date, time, pNum,
+							seatBuilder.toString().trim());
+				}
 			}
+		} catch (Exception e) {
+			System.err.println("Screen 조회 중 오류 발생: " + e.getMessage());
 		}
-
-		// 좌석 정보
-
-		String reservInfo = """
-				    <%s 님의 예약 정보입니다.>
-				-------------------------------
-				예약자 : %s
-				극장명 : %s
-				영화명 : %s
-				상영관 : %s
-				날짜   : %s
-				시간   : %s
-				인원 수 : %d
-				좌석번호: %s
-
-
-				    """.formatted(name, name, theater, movie, screen, date, time, pNum, seat);
 
 		return reservInfo;
 
 	}
 
 	// 티켓조회
-	public static void issueTicket(Scanner sc, Context<Reservation> reservContext, Seat seatManager) {
+	public static void issueTicket(Scanner sc, Context<Reservation> reservContext, Seat seatManager, Connection conn) {
 		// 로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
 		Reservation r = reservContext.getData().get(keyId);
@@ -338,7 +391,7 @@ public class Reservation {
 		}
 
 		// 예매 정보 출력
-		System.out.println(infoTicket(sc, reservContext));
+		System.out.println(infoTicket(sc, reservContext, conn));
 
 		// 취소 여부 확인
 		System.out.println("예매를 취소하시려면 0번을 선택하세요. (다른 번호 입력 시 유지됩니다.)");
