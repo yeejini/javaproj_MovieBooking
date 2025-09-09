@@ -239,7 +239,7 @@ public class Reservation {
 			return;
 		}
 
-		System.out.println(Reservation.infoTicket(sc, reservContext));
+		System.out.println(Reservation.infoTicket(sc, reservContext, seatCacheContext));
 
 		System.out.println("예매하시겠습니다?");
 
@@ -374,11 +374,12 @@ public class Reservation {
 
 					// ----------------- 5. ReservationSeat 테이블 삽입 -----------------
 					String insertReservSeatSql = "INSERT INTO ReservationSeat (reserv_id, seat_id) VALUES (?, ?)";
+
+					// ----------------- 3. ReservationSeat 테이블 삽입 -----------------
+
 					pstmtReservSeat = conn.prepareStatement(insertReservSeatSql);
 
 					for (String seatStr : seats) {
-						// seat_id 패턴: scheduleId-A1
-						// screen_id 조회 후
 						String seatId = screenId + "-" + seatStr; // S1-A1
 						pstmtReservSeat.setInt(1, reservId);
 						pstmtReservSeat.setString(2, seatId);
@@ -386,7 +387,7 @@ public class Reservation {
 					}
 					pstmtReservSeat.executeBatch();
 
-					conn.commit(); // 트랜잭션 커밋
+					conn.commit(); // **변경**: commit 한 번만 호출
 					// 사용자+스케줄 단위의 캐시 키
 
 					System.out.println("예매가 완료되었습니다. 안녕히 가세요.");
@@ -445,61 +446,197 @@ public class Reservation {
 	}
 
 	// 티켓정보
-	public static String infoTicket(Scanner sc, Context<Reservation> reservContext) {
-		// 로그인 세션에 임시저장된 id값 가져옴
+	// infoticket: 임시 저장값 기반 티켓 정보
+	public static String infoTicket(Scanner sc, Context<Reservation> reservContext,
+			Context<Integer[][]> seatCacheContext) {
 		String keyId = LoginSession.getCurrentId();
-		Reservation r = reservContext.getData().get(keyId);
-		// Reservation 객체나 필드가 null인지 체크
-		if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
-			return "티켓 정보가 없습니다.";
+		if (keyId == null || keyId.isEmpty()) {
+			return "로그인 정보가 없습니다.";
 		}
-		String name = r.getUser().getName();
-		String theater = r.getTheater().getTheaterName();
-		String movie = r.getMovie().getTitle();
+
+		Reservation r = reservContext.getData().get(keyId);
+		if (r == null) {
+			return "예매 정보가 없습니다.";
+		}
+
+		String userName = LoginSession.getCurrentId();
+		String theaterName = r.getTheater().getTheaterName();
+		String movieTitle = r.getMovie().getTitle();
 		String date = r.getMovie().getDate();
 		String time = r.getTime();
+		int people = r.getPeople();
+		String seatStr = r.getSeat();
 
-		String seat = r.getSeat();
+// 좌석 캐시 가져오기
+		String cacheKey = keyId + ":" + (r.getScheduleId() != null ? r.getScheduleId() : "");
+		Integer[][] seats = seatCacheContext.getData().get(cacheKey);
 
-		// MovieSchedule 리스트에서 매칭되는 schedule 찾기
-		String screen = ""; // 기본값
-//	      for (MovieSchedule schedule : MovieSchedule.movieS) {
-//	         if (schedule.getTitle().equals(movie) && schedule.getTheaterName().equals(theater)
-//	               && schedule.getDate().equals(date) && schedule.getTime().equals(time)) {
-//	            screen = schedule.getScreen(); // 상영관 정보 가져오기
-//	            break;
-//	         }
-//	      }
-
-		// 좌석 정보
-
-		String reservInfo = """
-				    <%s 님의 예약 정보입니다.>
+		String info = String.format("""
+				<%s 님의 임시 예약 정보입니다.>
 				-------------------------------
 				예약자 : %s
 				극장명 : %s
 				영화명 : %s
-				상영관 : %s
 				날짜   : %s
 				시간   : %s
 				인원 수 : %d
 				좌석번호: %s
+				""", userName, userName, theaterName, movieTitle, date, time, people, seatStr);
 
+		if (seats != null) {
+			StringBuilder seatLayout = new StringBuilder("\n=== 좌석 배치 ===\n");
+			for (int i = 0; i < seats.length; i++) {
+				seatLayout.append((char) ('A' + i)).append("  ");
+				for (int j = 0; j < seats[i].length; j++) {
+					seatLayout.append((seats[i][j] != null && seats[i][j] == 1) ? "[■]" : "[□]");
+				}
+				seatLayout.append("\n");
+			}
+			seatLayout.append("-------------------------------\n");
+			info += seatLayout.toString();
+		}
 
-				    """.formatted(name, name, theater, movie, screen, date, time, pNum, seat);
-
-		return reservInfo;
-
+		return info;
 	}
 
 	// 티켓조회
 	public static void issueTicket(Scanner sc, Connection conn) {
 		// 로그인 세션에 임시저장된 id값 가져옴
 		String keyId = LoginSession.getCurrentId();
+		// 1. 로그인 세션 확인
+		if (keyId == null || keyId.isEmpty()) {
+			System.out.println("로그인 정보가 없습니다. 먼저 로그인해주세요.");
+			return;
+		}
+
+		// 2. DB 연결 확인
+		if (conn == null) {
+			System.out.println("DB 연결이 없습니다.");
+			return;
+		}
 
 		String sql = """
-
+				    select r.reserv_id, u.name as user_name, t.t_name, m.title, ms.date, ms.time, ms.screen_id,
+				           group_concat(concat(se.row_num, se.seat_num)SEPARATOR ',') as seats, count(*) as people
+				    from reservation r
+				    join user u on r.user_id = u.user_id
+				    join movieschedule ms on r.schedule_id = ms.schedule_id
+				    join theater t on ms.theater_id = t.theater_id
+				    join movie m on ms.movie_id = m.movie_id
+				    join reservationseat rs on r.reserv_id = rs.reserv_id
+				    join seat se on rs.seat_id = se.seat_id
+				    where r.user_id = ?
+				    group by r.reserv_id, u.name, t.t_name, m.title, ms.date, ms.time, ms.screen_id
 				""";
+
+		try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+			stmt.setString(1, keyId);
+			ResultSet rs = stmt.executeQuery();
+			if (!rs.next()) {
+				System.out.println("예매 정보가 없습니다.");
+				return;
+			}
+			// 안전하게 컬럼 읽기
+			int reservId = rs.getInt("reserv_id");
+			String userName = rs.getString("user_name") != null ? rs.getString("user_name") : ""; // **변경: null 처리**
+			String theaterName = rs.getString("t_name") != null ? rs.getString("t_name") : ""; // **변경: null
+																								// 처리**
+			String movieTitle = rs.getString("title") != null ? rs.getString("title") : ""; // **변경: null
+																							// 처리**
+			String date = rs.getString("date") != null ? rs.getString("date") : ""; // **변경: null 처리**
+			String time = rs.getString("time") != null ? rs.getString("time") : ""; // **변경: null 처리**
+			String screenId = rs.getString("screen_id") != null ? rs.getString("screen_id") : ""; // **변경: null 처리**
+			String seats = rs.getString("seats") != null ? rs.getString("seats") : ""; // **변경: null 처리**
+			int people = rs.getInt("people"); // **변경: count(*)로 int 바로 가져오기**
+
+			// 티켓 출력
+			String ticketInfo = """
+					    <%s 님의 예약 정보입니다.>
+					    -------------------------------
+					    예약자 : %s
+					    극장명 : %s
+					    영화명 : %s
+					    상영관 : %s
+					    날짜   : %s
+					    시간   : %s
+					    인원 수 : %d
+					    좌석번호: %s
+					""".formatted(userName, userName, theaterName, movieTitle, screenId, date, time, people, seats);
+
+			System.out.println(ticketInfo);
+
+			// 취소 여부 확인
+			System.out.println("예매를 취소하시려면 0번을 선택하세요. (다른 번호 입력 시 유지됩니다.)");
+			System.out.print("선택> ");
+			int choice;
+			try {
+				choice = Integer.parseInt(sc.nextLine());
+			} catch (NumberFormatException e) {
+				System.out.println("잘못된 입력입니다. 예매를 유지합니다.");
+				return;
+			}
+
+			if (choice == 0) {
+				try {
+					conn.setAutoCommit(false);
+
+					// 1.reservation seat 삭제
+					String delReservSeat = "delete from reservationseat where reserv_id = ?";
+					try (PreparedStatement ps1 = conn.prepareStatement(delReservSeat)) {
+						ps1.setInt(1, reservId);
+						ps1.executeUpdate(); // **
+					}
+
+					// 2. reservation 삭제
+					String delReserve = "delete from reservation where reserv_id = ?";
+					try (PreparedStatement ps2 = conn.prepareStatement(delReserve)) {
+						ps2.setInt(1, reservId);
+						ps2.executeUpdate();
+					}
+
+					// 3. seat원복(is_seat== true)
+					String[] seatArr = seats.isEmpty() ? new String[0] : seats.split(",");
+					String updateSeat = "UPDATE Seat SET is_seats = TRUE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
+					try (PreparedStatement ps3 = conn.prepareStatement(updateSeat)) {
+						for (String s : seatArr) { // **
+							if (s.isEmpty()) {
+								continue; // 안전하게 skip
+							}
+							String row = s.substring(0, 1); // **
+							int seatNum = Integer.parseInt(s.substring(1)); // **
+							ps3.setString(1, screenId);
+							ps3.setString(2, row);
+							ps3.setInt(3, seatNum);
+							ps3.addBatch(); // **
+						}
+						ps3.executeBatch(); // **
+					}
+					conn.commit();// **
+					System.out.println("예매가 취소되었습니다.");
+
+				} catch (SQLException e) {
+					try {
+						conn.rollback();
+						System.out.println("예매 취소 중 오류 발생");
+					} catch (SQLException e2) {
+						e2.printStackTrace();
+					}
+					e.printStackTrace();
+				} finally { // **
+					try {
+						conn.setAutoCommit(true);
+					} catch (SQLException e) {
+						e.printStackTrace();
+					}
+				}
+			} else {
+				System.out.println("예매를 유지합니다.");
+			}
+
+		} catch (SQLException e) {
+			System.out.println("티켓 조회 중 오류 발생 : " + e.getMessage());
+			e.printStackTrace();
+		}
 //		Reservation r = reservContext.getData().get(keyId);
 //
 //		if (r == null || r.getUser() == null || r.getTheater() == null || r.getMovie() == null || r.getTime() == null) {
