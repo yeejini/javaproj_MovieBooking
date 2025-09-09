@@ -46,14 +46,23 @@ public class User {
 		while (true) {
 			System.out.println("사용할 아이디를 입력하세요(문자 4자리만 입력가능) : ");
 			id = sc.nextLine();
+
 			if (id.matches("^[a-zA-Z]{4}")) {
 				// 이미 해당 id가 있는지 확인
-				if (reservContext.getData().containsKey(id)) {
-					System.out.println("이미 존재하는 아이디입니다. 다시 입력해주세요.");
-					// continue → 다시 루프 돌기
-				} else {
-					// 새 아이디 등록 가능
-					break;
+				String sql = "SELECT COUNT(*) FROM Reservation WHERE user_id = ?";
+				try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+					pstmt.setString(1, id);
+					try (ResultSet rs = pstmt.executeQuery()) {
+						rs.next();
+						int count = rs.getInt(1);
+						if (count > 0) {
+							System.out.println("이미 존재하는 아이디입니다. 다시 입력해주세요.");
+							continue; // 루프 계속
+						} else {
+							// 중복 없음 → 등록 가능
+							break;
+						}
+					}
 				}
 			} else {
 				System.out.println("아이디 형식이 올바르지 않습니다. 다시 입력해주세요.");

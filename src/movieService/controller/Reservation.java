@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 
 import movieService.model.Movie;
 import movieService.model.Seat;
@@ -125,6 +126,7 @@ public class Reservation {
 		ArrayList<String> timeList = new ArrayList<>();
 		HashSet<String> addedTime = new HashSet<>(); // 중복 체크용
 		HashMap<String, String> timeToScheduleMap = new HashMap<>(); // time -> schedule_id 매핑
+		HashMap<String, Integer> timeToRemainingSeats = new HashMap<>(); // 시간 -> 남은 좌석
 
 		System.out.println("\n<시간을 선택하세요>");
 
@@ -146,6 +148,8 @@ public class Reservation {
 					if (!addedTime.contains(time)) {
 						// 좌석 수 계산 (Seat 클래스 or DB 조회)
 						int remainingSeats = Seat.getRemainingSeats(scheduleId, conn);
+						// DB 조회 후 while문에서 저장
+						timeToRemainingSeats.put(time, remainingSeats);
 
 						System.out.println(idx + ". " + time + " (남은좌석 : " + remainingSeats + ")");
 						timeList.add(time);
@@ -173,23 +177,31 @@ public class Reservation {
 		System.out.println(); // 마지막에 줄바꿈
 
 		// 시간 선택
-		System.out.println("선택>");
-		int choice = Integer.parseInt(sc.nextLine());
+		// 시간 선택 반복
+		while (true) {
+			System.out.print("선택> ");
+			int choice = Integer.parseInt(sc.nextLine());
 
-		if (choice == 0) {
-			return false;
-		} else {
-			String selectedTime = timeList.get(choice - 1); // 사용자가 선택한 시간
-			String selectedScheduleId = timeToScheduleMap.get(selectedTime); // 매핑된 schedule_id
+			if (choice == 0) {
+				return false; // 취소
+			} else if (choice < 1 || choice > timeList.size()) {
+				System.out.println("잘못된 선택입니다. 다시 입력하세요.");
+			} else {
+				String selectedTime = timeList.get(choice - 1);
+				int remainingSeats = timeToRemainingSeats.get(selectedTime);
 
-			r.setTime(selectedTime);
-			r.setScheduleId(selectedScheduleId); // Reservation 객체에 schedule_id 저장
-			System.out.println("선택된 시간: " + selectedTime);
-			System.out.println("저장된 schedule_id: " + selectedScheduleId);
-
-			return true;
+				if (remainingSeats == 0) {
+					System.out.println("현재 남은 좌석이 없습니다. 다른 시간을 선택하세요.");
+				} else {
+					String selectedScheduleId = timeToScheduleMap.get(selectedTime);
+					r.setTime(selectedTime);
+					r.setScheduleId(selectedScheduleId);
+					System.out.println("선택된 시간: " + selectedTime);
+					System.out.println("저장된 schedule_id: " + selectedScheduleId);
+					return true; // 올바른 선택 완료
+				}
+			}
 		}
-
 	}
 
 	static int pNum;
@@ -263,7 +275,6 @@ public class Reservation {
 				break;
 
 			} else if (n == 1) {
-				System.out.println("예매가 완료되었습니다. 안녕히 가세요.");
 
 				PreparedStatement pstmtSeat = null;
 				PreparedStatement pstmtReserv = null;
@@ -290,6 +301,50 @@ public class Reservation {
 							throw new SQLException("해당 scheduleId에 대한 screen_id를 찾을 수 없습니다.");
 						}
 
+						// 2. 여러 좌석 한 번에 잠금
+						StringBuilder placeholders = new StringBuilder();
+						for (int i = 0; i < seats.length; i++) {
+							placeholders.append("(?, ?)");
+							if (i < seats.length - 1) {
+								placeholders.append(", ");
+							}
+						}
+						String lockSeatSql = "SELECT * FROM Seat WHERE screen_id = ? AND (row_num, seat_num) IN ("
+								+ placeholders + ") FOR UPDATE";
+
+						try (PreparedStatement pstmtLock = conn.prepareStatement(lockSeatSql)) {
+							pstmtLock.setString(1, screenId);
+							int index = 2;
+							for (String seatStr : seats) {
+								String row = seatStr.substring(0, 1);
+								int seatNum = Integer.parseInt(seatStr.substring(1));
+								pstmtLock.setString(index++, row);
+								pstmtLock.setInt(index++, seatNum);
+							}
+
+							ResultSet rsLock = pstmtLock.executeQuery();
+
+							Set<String> lockedSeats = new HashSet<>();
+							while (rsLock.next()) {
+								String row = rsLock.getString("row_num");
+								int num = rsLock.getInt("seat_num");
+								lockedSeats.add(row + num);
+								if (!rsLock.getBoolean("is_seats")) {
+									System.out.println("이미 예약된 좌석입니다: " + row + num);
+									seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
+									return;
+								}
+							}
+
+							// DB에 없는 좌석 체크
+							for (String seatStr : seats) {
+								if (!lockedSeats.contains(seatStr)) {
+									throw new SQLException("좌석 정보를 찾을 수 없습니다: " + seatStr);
+								}
+							}
+						}
+
+						// 3. 좌석 상태 업데이트
 						String updateSeatSql = "UPDATE Seat SET is_seats = FALSE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
 						pstmtSeat = conn.prepareStatement(updateSeatSql);
 
@@ -304,7 +359,7 @@ public class Reservation {
 						pstmtSeat.executeBatch();
 					}
 
-					// ----------------- 2. Reservation 테이블 삽입 -----------------
+					// ----------------- 4. Reservation 테이블 삽입 -----------------
 					String insertReservSql = "INSERT INTO Reservation (user_id, schedule_id) VALUES (?, ?)";
 					pstmtReserv = conn.prepareStatement(insertReservSql, Statement.RETURN_GENERATED_KEYS);
 					pstmtReserv.setString(1, keyId);
@@ -317,8 +372,10 @@ public class Reservation {
 						reservId = rs.getInt(1);
 					}
 
+					// ----------------- 5. ReservationSeat 테이블 삽입 -----------------
+					String insertReservSeatSql = "INSERT INTO ReservationSeat (reserv_id, seat_id) VALUES (?, ?)";
+
 					// ----------------- 3. ReservationSeat 테이블 삽입 -----------------
-					String insertReservSeatSql = "INSERT INTO ReservationSeat (reserv_id, seat_id) VALUES (?, ?) ON DUPLICATE KEY UPDATE seat_id = seat_id";
 
 					pstmtReservSeat = conn.prepareStatement(insertReservSeatSql);
 
@@ -332,6 +389,8 @@ public class Reservation {
 
 					conn.commit(); // **변경**: commit 한 번만 호출
 					// 사용자+스케줄 단위의 캐시 키
+
+					System.out.println("예매가 완료되었습니다. 안녕히 가세요.");
 
 					// 사용자+스케줄 단위의 캐시 키
 					String cacheKey = keyId + ":" + r.getScheduleId();
