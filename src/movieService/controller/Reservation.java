@@ -198,7 +198,7 @@ public class Reservation {
 					r.setTime(selectedTime);
 					r.setScheduleId(selectedScheduleId);
 					System.out.println("선택된 시간: " + selectedTime);
-					System.out.println("저장된 schedule_id: " + selectedScheduleId);
+//					System.out.println("저장된 schedule_id: " + selectedScheduleId);
 					return true; // 올바른 선택 완료
 				}
 			}
@@ -277,84 +277,88 @@ public class Reservation {
 
 			} else if (n == 1) {
 
-				PreparedStatement pstmtSeat = null;
 				PreparedStatement pstmtReserv = null;
 				PreparedStatement pstmtReservSeat = null;
 
 				try {
 					conn.setAutoCommit(false); // 트랜잭션 시작
 
-					// ----------------- 1. Seat 테이블 업데이트 -----------------
-					String[] seats = r.getSeat().split(","); // "A1,A2" -> ["A1","A2"]
+					String[] seatStrs = r.getSeat().split(","); // "A1,A2" -> ["A1","A2"]
 
-					// scheduleId로 screen_id 조회 필요
+					// scheduleId로 screen_id 조회
 					String screenId = null;
 					String getScreenSql = "SELECT screen_id FROM MovieSchedule WHERE schedule_id = ?";
 					try (PreparedStatement pstmtScreen = conn.prepareStatement(getScreenSql)) {
 						pstmtScreen.setString(1, r.getScheduleId());
-						ResultSet rsScreen = pstmtScreen.executeQuery();
-
-						if (rsScreen.next()) {
-							screenId = rsScreen.getString("screen_id");
-						}
-
-						if (screenId == null) {
-							throw new SQLException("해당 scheduleId에 대한 screen_id를 찾을 수 없습니다.");
-						}
-
-						// 2. 여러 좌석 한 번에 잠금
-						StringBuilder placeholders = new StringBuilder();
-						for (int i = 0; i < seats.length; i++) {
-							placeholders.append("(?, ?)");
-							if (i < seats.length - 1) {
-								placeholders.append(", ");
+						try (ResultSet rsScreen = pstmtScreen.executeQuery()) {
+							if (rsScreen.next()) {
+								screenId = rsScreen.getString("screen_id");
 							}
 						}
-						String lockSeatSql = "SELECT * FROM Seat WHERE screen_id = ? AND (row_num, seat_num) IN ("
-								+ placeholders + ") FOR UPDATE";
+					}
 
-						try (PreparedStatement pstmtLock = conn.prepareStatement(lockSeatSql)) {
-							pstmtLock.setString(1, screenId);
-							int index = 2;
-							for (String seatStr : seats) {
-								String row = seatStr.substring(0, 1);
-								int seatNum = Integer.parseInt(seatStr.substring(1));
-								pstmtLock.setString(index++, row);
-								pstmtLock.setInt(index++, seatNum);
-							}
+					if (screenId == null) {
+						throw new SQLException("해당 scheduleId에 대한 screen_id를 찾을 수 없습니다.");
+					}
 
-							ResultSet rsLock = pstmtLock.executeQuery();
+					// seat_id 목록 준비 (Seat 테이블 기준)
+					List<String> seatIds = new ArrayList<>();
+					for (String seatStr : seatStrs) {
+						seatIds.add(screenId + "-" + seatStr); // Seat.seat_id
+					}
 
-							Set<String> lockedSeats = new HashSet<>();
+					// ----------------- 1. ScheduleSeat 잠금/예약 확인 -----------------
+					StringBuilder qMarks = new StringBuilder();
+					for (int i = 0; i < seatIds.size(); i++) {
+						qMarks.append("?");
+						if (i < seatIds.size() - 1) {
+							qMarks.append(", ");
+						}
+					}
+
+					String lockSeatSql = "SELECT * FROM ScheduleSeat WHERE schedule_id = ? AND seat_id IN ("
+							+ qMarks.toString() + ") FOR UPDATE";
+
+					Set<String> lockedSeats = new HashSet<>();
+					try (PreparedStatement pstmtLock = conn.prepareStatement(lockSeatSql)) {
+						pstmtLock.setString(1, r.getScheduleId());
+						for (int i = 0; i < seatIds.size(); i++) {
+							pstmtLock.setString(2 + i, seatIds.get(i));
+						}
+
+						try (ResultSet rsLock = pstmtLock.executeQuery()) {
 							while (rsLock.next()) {
-								String row = rsLock.getString("row_num");
-								int num = rsLock.getInt("seat_num");
-								lockedSeats.add(row + num);
-								if (!rsLock.getBoolean("is_seats")) {
-									System.out.println("이미 예약된 좌석입니다: " + row + num);
-//									seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
+								String seatId = rsLock.getString("seat_id");
+								lockedSeats.add(seatId);
+								if (rsLock.getBoolean("is_reserved")) {
+									System.out.println("이미 예약된 좌석입니다: " + seatId);
+									conn.rollback();
 									return false; // 이미 예약된 좌석이면 false
 								}
 							}
+						}
+					}
 
-							// DB에 없는 좌석 체크
-							for (String seatStr : seats) {
-								if (!lockedSeats.contains(seatStr)) {
-									throw new SQLException("좌석 정보를 찾을 수 없습니다: " + seatStr);
-								}
+					// ----------------- 2. ScheduleSeat에 없는 좌석 INSERT -----------------
+					String insertEmptySql = "INSERT INTO ScheduleSeat(schedule_id, seat_id, is_reserved) VALUES (?, ?, FALSE)";
+					for (String seatId : seatIds) {
+						if (!lockedSeats.contains(seatId)) {
+							try (PreparedStatement pstmtInsert = conn.prepareStatement(insertEmptySql)) {
+								pstmtInsert.setString(1, r.getScheduleId());
+								pstmtInsert.setString(2, seatId);
+								pstmtInsert.executeUpdate();
 							}
 						}
+					}
 
-						// 3. 좌석 상태 업데이트
-						String updateSeatSql = "UPDATE Seat SET is_seats = FALSE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
-						pstmtSeat = conn.prepareStatement(updateSeatSql);
-
-						for (String seatStr : seats) {
-							String row = seatStr.substring(0, 1);
-							int seatNum = Integer.parseInt(seatStr.substring(1));
-							pstmtSeat.setString(1, screenId);
-							pstmtSeat.setString(2, row);
-							pstmtSeat.setInt(3, seatNum);
+					// ----------------- 3. ScheduleSeat 예약 처리 (is_reserved = TRUE)
+					// -----------------
+					String updateSeatSql = "INSERT INTO ScheduleSeat(schedule_id, seat_id, is_reserved) VALUES (?, ?, TRUE) "
+							+ "ON DUPLICATE KEY UPDATE is_reserved = TRUE";
+					try (PreparedStatement pstmtSeat = conn.prepareStatement(updateSeatSql)) {
+						for (String seatId : seatIds) {
+							pstmtSeat.setString(1, r.getScheduleId());
+							pstmtSeat.setString(2, seatId);
 							pstmtSeat.addBatch();
 						}
 						pstmtSeat.executeBatch();
@@ -367,59 +371,41 @@ public class Reservation {
 					pstmtReserv.setString(2, r.getScheduleId());
 					pstmtReserv.executeUpdate();
 
-					ResultSet rs = pstmtReserv.getGeneratedKeys();
 					int reservId = 0;
-					if (rs.next()) {
-						reservId = rs.getInt(1);
+					try (ResultSet rs = pstmtReserv.getGeneratedKeys()) {
+						if (rs.next()) {
+							reservId = rs.getInt(1);
+						}
 					}
 
 					// ----------------- 5. ReservationSeat 테이블 삽입 -----------------
 					String insertReservSeatSql = "INSERT INTO ReservationSeat (reserv_id, seat_id) VALUES (?, ?)";
-
-					// ----------------- 3. ReservationSeat 테이블 삽입 -----------------
-
 					pstmtReservSeat = conn.prepareStatement(insertReservSeatSql);
-
-					for (String seatStr : seats) {
-						String seatId = screenId + "-" + seatStr; // S1-A1
+					for (String seatId : seatIds) {
 						pstmtReservSeat.setInt(1, reservId);
 						pstmtReservSeat.setString(2, seatId);
 						pstmtReservSeat.addBatch();
 					}
 					pstmtReservSeat.executeBatch();
 
-					conn.commit(); // **변경**: commit 한 번만 호출
-					// 사용자+스케줄 단위의 캐시 키
-
+					conn.commit();
 					System.out.println("예매가 완료되었습니다. 안녕히 가세요.");
 
-					// 사용자+스케줄 단위의 캐시 키
-					String cacheKey = keyId + ":" + r.getScheduleId();
-					System.out.println("삭제할 캐시 키: " + cacheKey);
-					System.out.println("삭제 전 캐시 존재 여부: " + seatCacheContext.getData().containsKey(cacheKey));
-
 					// 캐시 삭제
+					String cacheKey = keyId + ":" + r.getScheduleId();
 					seatCacheContext.getData().remove(cacheKey);
 
-					System.out.println("삭제 후 캐시 존재 여부: " + seatCacheContext.getData().containsKey(cacheKey));
-
-					return true; // 결제 성공 시 true 반환
+					return true;
 
 				} catch (SQLException e) {
 					try {
-						conn.rollback(); // 문제 발생 시 롤백
+						conn.rollback();
 						System.out.println("예매 처리 중 오류 발생, 롤백되었습니다.");
 					} catch (SQLException ex) {
 						ex.printStackTrace();
 					}
 					e.printStackTrace();
 				} finally {
-					try {
-						if (pstmtSeat != null) {
-							pstmtSeat.close();
-						}
-					} catch (SQLException e) {
-					}
 					try {
 						if (pstmtReserv != null) {
 							pstmtReserv.close();
@@ -438,13 +424,10 @@ public class Reservation {
 					}
 				}
 
-				break;
-
 			} else {
 				System.out.println("번호를 잘못 입력하셨습니다. 다시 입력하세요>");
 			}
 		}
-		return false;
 	}
 
 	// 티켓정보
@@ -615,60 +598,73 @@ public class Reservation {
 		}
 	}
 
-	// reservation 취소 처리 함수
 	private static void cancelReservation(int reservId, Connection conn) {
 		try {
 			conn.setAutoCommit(false);
 
-			// 1. reservation seat 삭제
-			String delReservSeat = "DELETE FROM reservationseat WHERE reserv_id = ?";
-			try (PreparedStatement ps1 = conn.prepareStatement(delReservSeat)) {
-				ps1.setInt(1, reservId);
-				ps1.executeUpdate();
-			}
-
-			// 2. reservation 삭제
-			String delReserve = "DELETE FROM reservation WHERE reserv_id = ?";
-			try (PreparedStatement ps2 = conn.prepareStatement(delReserve)) {
-				ps2.setInt(1, reservId);
-				ps2.executeUpdate();
-			}
-
-			// 3. seat 원복(is_seats = TRUE)
-			String selectSeats = """
-					    SELECT rs.seat_id, ms.screen_id
+			// 1. 예약된 좌석 정보 조회 (ReservationSeat + ScheduleSeat)
+			String selectSeatsSql = """
+					    SELECT rs.seat_id, r.schedule_id
 					    FROM reservationseat rs
-					    JOIN movieschedule ms ON rs.reserv_id = ?
+					    JOIN reservation r ON rs.reserv_id = r.reserv_id
+					    WHERE rs.reserv_id = ?
 					""";
-			try (PreparedStatement ps3 = conn.prepareStatement(selectSeats)) {
-				ps3.setInt(1, reservId);
-				ResultSet rs = ps3.executeQuery();
-				List<String> seatArr = new ArrayList<>();
-				String screenId = "";
-				while (rs.next()) {
-					seatArr.add(rs.getString("seat_id"));
-					screenId = rs.getString("screen_id");
-				}
 
-				String updateSeat = "UPDATE Seat SET is_seats = TRUE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
-				try (PreparedStatement ps4 = conn.prepareStatement(updateSeat)) {
-					for (String s : seatArr) {
-						if (s == null || s.isEmpty()) {
-							continue;
-						}
-						String row = s.substring(s.indexOf('-') + 1, s.indexOf('-') + 2); // "S1-A1" -> "A"
-						int seatNum = Integer.parseInt(s.substring(s.indexOf('-') + 2)); // "1"
-						ps4.setString(1, screenId);
-						ps4.setString(2, row);
-						ps4.setInt(3, seatNum);
-						ps4.addBatch();
+			List<String> seatIds = new ArrayList<>();
+			String scheduleId = null;
+
+			try (PreparedStatement ps = conn.prepareStatement(selectSeatsSql)) {
+				ps.setInt(1, reservId);
+				try (ResultSet rs = ps.executeQuery()) {
+					while (rs.next()) {
+						seatIds.add(rs.getString("seat_id"));
+						scheduleId = rs.getString("schedule_id");
 					}
-					ps4.executeBatch();
 				}
+			}
+
+			if (seatIds.isEmpty() || scheduleId == null) {
+				System.out.println("해당 예약 정보가 없습니다.");
+				conn.rollback();
+				return;
+			}
+
+			// 2. ScheduleSeat 원복 (is_reserved = FALSE)
+			StringBuilder qMarks = new StringBuilder();
+			for (int i = 0; i < seatIds.size(); i++) {
+				qMarks.append("?");
+				if (i < seatIds.size() - 1) {
+					qMarks.append(", ");
+				}
+			}
+
+			String updateSeatSql = "UPDATE ScheduleSeat SET is_reserved = FALSE WHERE schedule_id = ? AND seat_id IN ("
+					+ qMarks + ")";
+			try (PreparedStatement ps = conn.prepareStatement(updateSeatSql)) {
+				ps.setString(1, scheduleId);
+				for (int i = 0; i < seatIds.size(); i++) {
+					ps.setString(i + 2, seatIds.get(i));
+				}
+				ps.executeUpdate();
+			}
+
+			// 3. ReservationSeat 삭제
+			String delReservSeatSql = "DELETE FROM ReservationSeat WHERE reserv_id = ?";
+			try (PreparedStatement ps = conn.prepareStatement(delReservSeatSql)) {
+				ps.setInt(1, reservId);
+				ps.executeUpdate();
+			}
+
+			// 4. Reservation 삭제
+			String delReservationSql = "DELETE FROM Reservation WHERE reserv_id = ?";
+			try (PreparedStatement ps = conn.prepareStatement(delReservationSql)) {
+				ps.setInt(1, reservId);
+				ps.executeUpdate();
 			}
 
 			conn.commit();
 			System.out.println("선택한 티켓이 취소되었습니다.");
+
 		} catch (SQLException e) {
 			try {
 				conn.rollback();
@@ -685,4 +681,75 @@ public class Reservation {
 			}
 		}
 	}
+
+	// reservation 취소 처리 함수
+//	private static void cancelReservation(int reservId, Connection conn) {
+//		try {
+//			conn.setAutoCommit(false);
+//
+//			// 1. reservation seat 삭제
+//			String delReservSeat = "DELETE FROM reservationseat WHERE reserv_id = ?";
+//			try (PreparedStatement ps1 = conn.prepareStatement(delReservSeat)) {
+//				ps1.setInt(1, reservId);
+//				ps1.executeUpdate();
+//			}
+//
+//			// 2. reservation 삭제
+//			String delReserve = "DELETE FROM reservation WHERE reserv_id = ?";
+//			try (PreparedStatement ps2 = conn.prepareStatement(delReserve)) {
+//				ps2.setInt(1, reservId);
+//				ps2.executeUpdate();
+//			}
+//
+//			// 3. seat 원복(is_seats = TRUE)
+//			String selectSeats = """
+//					    SELECT rs.seat_id, ms.screen_id
+//					    FROM reservationseat rs
+//					    JOIN movieschedule ms ON rs.reserv_id = ?
+//					""";
+//			try (PreparedStatement ps3 = conn.prepareStatement(selectSeats)) {
+//				ps3.setInt(1, reservId);
+//				ResultSet rs = ps3.executeQuery();
+//				List<String> seatArr = new ArrayList<>();
+//				String screenId = "";
+//				while (rs.next()) {
+//					seatArr.add(rs.getString("seat_id"));
+//					screenId = rs.getString("screen_id");
+//				}
+//
+//				String updateSeat = "UPDATE Seat SET is_seats = TRUE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
+//				try (PreparedStatement ps4 = conn.prepareStatement(updateSeat)) {
+//					for (String s : seatArr) {
+//						if (s == null || s.isEmpty()) {
+//							continue;
+//						}
+//						String row = s.substring(s.indexOf('-') + 1, s.indexOf('-') + 2); // "S1-A1" -> "A"
+//						int seatNum = Integer.parseInt(s.substring(s.indexOf('-') + 2)); // "1"
+//						ps4.setString(1, screenId);
+//						ps4.setString(2, row);
+//						ps4.setInt(3, seatNum);
+//						ps4.addBatch();
+//					}
+//					ps4.executeBatch();
+//				}
+//			}
+//
+//			conn.commit();
+//			System.out.println("선택한 티켓이 취소되었습니다.");
+//		} catch (SQLException e) {
+//			try {
+//				conn.rollback();
+//				System.out.println("티켓 취소 중 오류 발생, 롤백되었습니다.");
+//			} catch (SQLException ex) {
+//				ex.printStackTrace();
+//			}
+//			e.printStackTrace();
+//		} finally {
+//			try {
+//				conn.setAutoCommit(true);
+//			} catch (SQLException e) {
+//				e.printStackTrace();
+//			}
+//		}
+//	}
 }

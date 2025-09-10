@@ -86,14 +86,19 @@ public class Seat {
 			}
 		}
 
-		String sql = "SELECT s.row_num, s.seat_num, "
-				+ "       COALESCE(MAX(CASE WHEN r.reserv_id IS NOT NULL THEN 1 ELSE 0 END),0) AS reserved "
-				+ "FROM Seat s " + "LEFT JOIN ReservationSeat rs ON rs.seat_id = s.seat_id "
-				+ "LEFT JOIN Reservation r ON r.reserv_id = rs.reserv_id "
-				+ "                         AND r.is_canceled = FALSE "
-				+ "                         AND r.schedule_id = ? " + // ★
-				"WHERE s.screen_id = (SELECT ms.screen_id FROM MovieSchedule ms WHERE ms.schedule_id = ?) " + // ★
-				"GROUP BY s.row_num, s.seat_num " + "ORDER BY s.row_num, s.seat_num";
+		String sql = """
+				    SELECT s.row_num, s.seat_num,
+				           COALESCE(ss.is_reserved, FALSE) AS reserved
+				    FROM Seat s
+				    LEFT JOIN ScheduleSeat ss
+				      ON s.seat_id = ss.seat_id AND ss.schedule_id = ?
+				    WHERE s.screen_id = (
+				        SELECT ms.screen_id
+				        FROM MovieSchedule ms
+				        WHERE ms.schedule_id = ?
+				    )
+				    ORDER BY s.row_num, s.seat_num
+				""";
 
 		try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 			pstmt.setString(1, scheduleId); // r.schedule_id = ?
@@ -103,10 +108,12 @@ public class Seat {
 					char rowChar = Character.toUpperCase(rs.getString("row_num").charAt(0));
 					int row = rowChar - 'A'; // A->0, B->1, ...
 					int col = rs.getInt("seat_num") - 1; // 1->0, 5->4
-					int reserved = rs.getInt("reserved");
+//					int reserved = rs.getInt("reserved");
+					boolean reserved = rs.getBoolean("reserved");
 
 					if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-						seats[row][col] = reserved; // 0 or 1
+//						seats[row][col] = reserved; // 0 or 1
+						seats[row][col] = reserved ? 1 : 0;
 					}
 				}
 			}
@@ -128,7 +135,7 @@ public class Seat {
 
 		// 사용자가 앞에서 선택한 영화 스케줄의 Id가져오기
 		String scheduleId = reserv.getScheduleId();
-		System.out.println("현재스케줄 ID:" + scheduleId);
+//		System.out.println("현재스케줄 ID:" + scheduleId);
 
 		// 사용자+스케줄 단위의 캐시 키
 		String cacheKey = keyId + ":" + scheduleId;
@@ -205,16 +212,16 @@ public class Seat {
 					seatCacheContext.getData().put(cacheKey, newCacheSeats);
 
 					// 선택 좌석 출력
-					System.out.println("캐시에 저장된 좌석: ");
-					for (int r = 0; r < seats.length; r++) {
-						for (int c = 0; c < seats[r].length; c++) {
-							System.out.print(seats[r][c] + " ");
-						}
-						System.out.println();
-					}
+//					System.out.println("캐시에 저장된 좌석: ");
+//					for (int r = 0; r < seats.length; r++) {
+//						for (int c = 0; c < seats[r].length; c++) {
+//							System.out.print(seats[r][c] + " ");
+//						}
+//						System.out.println();
+//					}
 
 					reserv.setSeat(String.join(",", getSeat())); // reservation에 저장
-					System.out.println("seat 선택 후 Reservation seat: " + reserv.getSeat()); // debug
+//					System.out.println("seat 선택 후 Reservation seat: " + reserv.getSeat()); // debug
 
 					break;
 				} else {
@@ -225,96 +232,8 @@ public class Seat {
 		}
 		System.out.println();
 //		printSeats(key, seats);
-		printSeats(cacheKey, seats);
+//		printSeats(cacheKey, seats);
 		System.out.println(String.join(",", getSeat()) + "이 선택되셨습니다.\n"); // 선택 확인하기 위해 다시 출력
-	}
-//	public void selectSeat(Scanner sc, Context<Reservation> reservContext, Context<Integer[][]> seatCacheContext,
-//			Connection conn) {
-//
-//		clearSeats(); // 좌석 정보 초기화
-//
-//		String keyId = LoginSession.getCurrentId();
-//		Reservation reserv = reservContext.getData().get(keyId);
-//
-//		String scheduleId = reserv.getScheduleId();
-//		System.out.println("현재스케줄 ID:" + scheduleId);
-//
-//		String cacheKey = keyId + ":" + scheduleId;
-//
-//		while (true) { // 재선택 루프
-//// DB에서 최신 좌석 정보 불러오기
-//			Integer[][] seats = getSeatsFromDB(scheduleId, conn);
-//			seatCacheContext.getData().put(cacheKey, seats);
-//
-//			printSeats(cacheKey, seats);
-//
-//			int peonum = reserv.getPeople();
-//			String selectedSeat = "";
-//
-//			for (int i = 0; i < peonum; i++) {
-//				if (peonum != 1) {
-//					System.out.println("\n<" + (i + 1) + "번째 좌석선택>");
-//				}
-//				while (true) {
-//					System.out.println("예약하실 좌석의 행을 입력하세요(A~E) : ");
-//					String strRow = sc.nextLine();
-//					if (strRow.isEmpty()) {
-//						continue;
-//					}
-//
-//					char charRow = Character.toUpperCase(strRow.trim().charAt(0));
-//					if (charRow < 'A' || charRow > 'E') {
-//						System.out.println("선택할 수 없는 행입니다.");
-//						continue;
-//					}
-//					int intRow = charRow - 'A';
-//
-//					System.out.println("예약하실 좌석의 열을 입력하세요(1~5) : ");
-//					int col = Integer.parseInt(sc.nextLine());
-//					if (col < 1 || col > 5) {
-//						System.out.println("선택할 수 없는 열입니다.");
-//						continue;
-//					}
-//
-//					if (seats[intRow][col - 1] == null || seats[intRow][col - 1] == 0) {
-//						seats[intRow][col - 1] = 1;
-//						selectedSeat = "" + charRow + col;
-//						this.addSeat(selectedSeat);
-//						break;
-//					} else {
-//						System.out.println("이미 예약된 좌석입니다.\n");
-//					}
-//				}
-//			}
-//
-//			reserv.setSeat(String.join(",", getSeat()));
-//
-//			printSeats(cacheKey, seats);
-//			System.out.println(String.join(",", getSeat()) + "이 선택되셨습니다.\n");
-//			break; // 정상 선택 시 루프 종료
-//		}
-//	}
-
-	// 특정 schedule_id 기준 남은 좌석 수 구하기
-	public static int getRemainingSeats(String scheduleId, Connection conn) {
-		String sql = "SELECT COUNT(*) AS remaining_seats " + "FROM Seat s " + "WHERE s.screen_id = ( "
-				+ "   SELECT ms.screen_id " + "   FROM MovieSchedule ms " + "   WHERE ms.schedule_id = ? ) "
-				+ "AND s.seat_id NOT IN ( " + "   SELECT rs.seat_id " + "   FROM ReservationSeat rs "
-				+ "   JOIN Reservation r ON rs.reserv_id = r.reserv_id "
-				+ "   WHERE r.schedule_id = ? AND r.is_canceled = FALSE )";
-
-		try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-			pstmt.setString(1, scheduleId);
-			pstmt.setString(2, scheduleId);
-
-			ResultSet rs = pstmt.executeQuery();
-			if (rs.next()) {
-				return rs.getInt("remaining_seats");
-			}
-		} catch (SQLException e) {
-			System.err.println("남은 좌석 조회 중 오류 발생: " + e.getMessage());
-		}
-		return 0;
 	}
 
 	// 예매 취소 메서드
@@ -331,4 +250,35 @@ public class Seat {
 		context.getData().put(key, seats); // 저장
 		clearSeats(); // 선택한 좌석들 리스트에서 초기화
 	}
+
+	// 특정 schedule_id 기준 남은 좌석 수 구하기
+	public static int getRemainingSeats(String scheduleId, Connection conn) {
+		String sql = """
+				    SELECT COUNT(*) AS remaining_seats
+				    FROM Seat s
+				    LEFT JOIN ScheduleSeat ss
+				      ON s.seat_id = ss.seat_id
+				     AND ss.schedule_id = ?
+				    WHERE s.screen_id = (
+				        SELECT ms.screen_id
+				        FROM MovieSchedule ms
+				        WHERE ms.schedule_id = ?
+				    )
+				      AND (ss.is_reserved IS NULL OR ss.is_reserved = FALSE)
+				""";
+
+		try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+			pstmt.setString(1, scheduleId);
+			pstmt.setString(2, scheduleId);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				if (rs.next()) {
+					return rs.getInt("remaining_seats");
+				}
+			}
+		} catch (SQLException e) {
+			System.err.println("남은 좌석 조회 중 오류 발생: " + e.getMessage());
+		}
+		return 0;
+	}
+
 }
