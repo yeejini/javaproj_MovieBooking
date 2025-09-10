@@ -332,7 +332,7 @@ public class Reservation {
 								lockedSeats.add(row + num);
 								if (!rsLock.getBoolean("is_seats")) {
 									System.out.println("이미 예약된 좌석입니다: " + row + num);
-									seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
+//									seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
 									return false; // 이미 예약된 좌석이면 false
 								}
 							}
