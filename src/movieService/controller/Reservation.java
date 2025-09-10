@@ -229,7 +229,7 @@ public class Reservation {
 		}
 	}
 
-	public static void submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager,
+	public static boolean submitPayment(Scanner sc, Context<Reservation> reservContext, Seat seatManager,
 			Context<Integer[][]> seatCacheContext, Connection conn) {
 
 		String keyId = LoginSession.getCurrentId();
@@ -237,7 +237,7 @@ public class Reservation {
 
 		if (r == null) {
 			System.out.println("예매 정보가 없습니다.");
-			return;
+			return false;
 		}
 
 		System.out.println(Reservation.infoTicket(sc, reservContext, seatCacheContext));
@@ -273,7 +273,7 @@ public class Reservation {
 				}
 
 				seatManager.cancleSeat(key);
-				break;
+				return false; // 취소 처리 시 false 반환
 
 			} else if (n == 1) {
 
@@ -332,8 +332,8 @@ public class Reservation {
 								lockedSeats.add(row + num);
 								if (!rsLock.getBoolean("is_seats")) {
 									System.out.println("이미 예약된 좌석입니다: " + row + num);
-									seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
-									return;
+//									seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
+									return false; // 이미 예약된 좌석이면 false
 								}
 							}
 
@@ -403,7 +403,7 @@ public class Reservation {
 
 					System.out.println("삭제 후 캐시 존재 여부: " + seatCacheContext.getData().containsKey(cacheKey));
 
-					// 배열 초기화는 필요 없음, 캐시 삭제만으로 다음 사용자는 DB 기준 좌석을 조회
+					return true; // 결제 성공 시 true 반환
 
 				} catch (SQLException e) {
 					try {
@@ -444,6 +444,7 @@ public class Reservation {
 				System.out.println("번호를 잘못 입력하셨습니다. 다시 입력하세요>");
 			}
 		}
+		return false;
 	}
 
 	// 티켓정보

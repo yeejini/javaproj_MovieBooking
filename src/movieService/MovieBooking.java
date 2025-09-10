@@ -210,15 +210,27 @@ public class MovieBooking {
 				}
 			}
 
+//			case SEAT -> {
+//				seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
+//				step = Step.PAYMENT;
+//			}
+
 			case SEAT -> {
-				seatManager.selectSeat(sc, reservContext, seatCacheContext, conn);
+				seatManager.selectSeat(sc, reservContext, seatCacheContext, conn); // 좌석 선택
+				Reservation r = reservContext.getData().get(LoginSession.getCurrentId());
+				System.out.println("main 선택 후 Reservation seat: " + r.getSeat()); // debug
 				step = Step.PAYMENT;
 			}
 
 			case PAYMENT -> {
-				Reservation.submitPayment(sc, reservContext, seatManager, seatCacheContext, conn);
-				step = Step.EXIT;
+				boolean paymentDone = Reservation.submitPayment(sc, reservContext, seatManager, seatCacheContext, conn);
+				step = paymentDone ? Step.EXIT : Step.SEAT;
 			}
+
+//			case PAYMENT -> {
+//				Reservation.submitPayment(sc, reservContext, seatManager, seatCacheContext, conn);
+//				step = Step.EXIT;
+//			}
 			}
 		}
 	}
