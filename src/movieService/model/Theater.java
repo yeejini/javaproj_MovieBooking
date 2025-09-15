@@ -127,8 +127,8 @@ public class Theater {
 		try {
 			String sql = """
 					select distinct t.theater_id ,t.t_name
-					from movieschedule ms
-					join theater t on ms.theater_id = t.theater_id
+					from MovieSchedule ms
+					join Theater t on ms.theater_id = t.theater_id
 					where ms.movie_id = ?;
 						""";
 			PreparedStatement stmt = conn.prepareStatement(sql);

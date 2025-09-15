@@ -502,13 +502,13 @@ public class Reservation {
 		String sql = """
 				    select r.reserv_id, u.name as user_name, t.t_name, m.title, ms.date, ms.time, ms.screen_id,
 				           group_concat(concat(se.row_num, se.seat_num) SEPARATOR ',') as seats, count(*) as people
-				    from reservation r
-				    join user u on r.user_id = u.user_id
-				    join movieschedule ms on r.schedule_id = ms.schedule_id
-				    join theater t on ms.theater_id = t.theater_id
-				    join movie m on ms.movie_id = m.movie_id
-				    join reservationseat rs on r.reserv_id = rs.reserv_id
-				    join seat se on rs.seat_id = se.seat_id
+				    from Reservation r
+				    join User u on r.user_id = u.user_id
+				    join MovieSchedule ms on r.schedule_id = ms.schedule_id
+				    join Theater t on ms.theater_id = t.theater_id
+				    join Movie m on ms.movie_id = m.movie_id
+				    join ReservationSeat rs on r.reserv_id = rs.reserv_id
+				    join Seat se on rs.seat_id = se.seat_id
 				    where r.user_id = ?
 				    group by r.reserv_id, u.name, t.t_name, m.title, ms.date, ms.time, ms.screen_id
 				""";
@@ -605,8 +605,8 @@ public class Reservation {
 			// 1. 예약된 좌석 정보 조회 (ReservationSeat + ScheduleSeat)
 			String selectSeatsSql = """
 					    SELECT rs.seat_id, r.schedule_id
-					    FROM reservationseat rs
-					    JOIN reservation r ON rs.reserv_id = r.reserv_id
+					    FROM ReservationSeat rs
+					    JOIN Reservation r ON rs.reserv_id = r.reserv_id
 					    WHERE rs.reserv_id = ?
 					""";
 
@@ -682,74 +682,4 @@ public class Reservation {
 		}
 	}
 
-	// reservation 취소 처리 함수
-//	private static void cancelReservation(int reservId, Connection conn) {
-//		try {
-//			conn.setAutoCommit(false);
-//
-//			// 1. reservation seat 삭제
-//			String delReservSeat = "DELETE FROM reservationseat WHERE reserv_id = ?";
-//			try (PreparedStatement ps1 = conn.prepareStatement(delReservSeat)) {
-//				ps1.setInt(1, reservId);
-//				ps1.executeUpdate();
-//			}
-//
-//			// 2. reservation 삭제
-//			String delReserve = "DELETE FROM reservation WHERE reserv_id = ?";
-//			try (PreparedStatement ps2 = conn.prepareStatement(delReserve)) {
-//				ps2.setInt(1, reservId);
-//				ps2.executeUpdate();
-//			}
-//
-//			// 3. seat 원복(is_seats = TRUE)
-//			String selectSeats = """
-//					    SELECT rs.seat_id, ms.screen_id
-//					    FROM reservationseat rs
-//					    JOIN movieschedule ms ON rs.reserv_id = ?
-//					""";
-//			try (PreparedStatement ps3 = conn.prepareStatement(selectSeats)) {
-//				ps3.setInt(1, reservId);
-//				ResultSet rs = ps3.executeQuery();
-//				List<String> seatArr = new ArrayList<>();
-//				String screenId = "";
-//				while (rs.next()) {
-//					seatArr.add(rs.getString("seat_id"));
-//					screenId = rs.getString("screen_id");
-//				}
-//
-//				String updateSeat = "UPDATE Seat SET is_seats = TRUE WHERE screen_id = ? AND row_num = ? AND seat_num = ?";
-//				try (PreparedStatement ps4 = conn.prepareStatement(updateSeat)) {
-//					for (String s : seatArr) {
-//						if (s == null || s.isEmpty()) {
-//							continue;
-//						}
-//						String row = s.substring(s.indexOf('-') + 1, s.indexOf('-') + 2); // "S1-A1" -> "A"
-//						int seatNum = Integer.parseInt(s.substring(s.indexOf('-') + 2)); // "1"
-//						ps4.setString(1, screenId);
-//						ps4.setString(2, row);
-//						ps4.setInt(3, seatNum);
-//						ps4.addBatch();
-//					}
-//					ps4.executeBatch();
-//				}
-//			}
-//
-//			conn.commit();
-//			System.out.println("선택한 티켓이 취소되었습니다.");
-//		} catch (SQLException e) {
-//			try {
-//				conn.rollback();
-//				System.out.println("티켓 취소 중 오류 발생, 롤백되었습니다.");
-//			} catch (SQLException ex) {
-//				ex.printStackTrace();
-//			}
-//			e.printStackTrace();
-//		} finally {
-//			try {
-//				conn.setAutoCommit(true);
-//			} catch (SQLException e) {
-//				e.printStackTrace();
-//			}
-//		}
-//	}
 }
