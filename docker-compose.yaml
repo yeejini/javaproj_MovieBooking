@@ -1,0 +1,52 @@
+version: "3.9"
+services:
+  # DB 컨테이너 (미리 데이터가 들어있는 이미지)
+  db:
+    image: kangyejini/movie_db:run  # 미리 데이터가 들어 있는 DB 이미지
+    container_name: moviemysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 1111
+      MYSQL_DATABASE: movieservice
+      TZ: Asia/Seoul
+    ports:
+      - "3377:3306"   # 로컬에서 Workbench 등으로 접속할 포트
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p1111 --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - db_data:/var/lib/mysql           # DB 데이터 영속화
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql  # 초기 SQL 실행
+    restart: unless-stopped
+    networks:
+      - movie-net
+
+  # Java 앱 컨테이너
+  app:
+    image: kangyejini/movieservice:complete   # Java 앱 이미지
+    container_name: movie-app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: movieservice
+      DB_USER: root
+      DB_PASSWORD: 1111
+      JAVA_TOOL_OPTIONS: "-Dfile.encoding=UTF-8"
+      LANG: "C.UTF-8"
+      LC_ALL: "C.UTF-8"
+      TZ: Asia/Seoul
+    stdin_open: true    # CLI 기반 앱 입력 가능
+    tty: true           # 터미널 출력 가능
+    networks:
+      - movie-net
+
+volumes:
+  db_data:
+
+networks:
+  movie-net:
+    driver: bridge
