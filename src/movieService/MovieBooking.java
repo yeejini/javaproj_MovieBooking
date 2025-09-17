@@ -1,12 +1,12 @@
 package movieService;
 
-import java.util.ArrayList;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.Scanner;
 
 import movieService.controller.Context;
 import movieService.controller.LoginSession;
 import movieService.controller.Reservation;
-import movieService.data.MovieSchedule;
 import movieService.model.Movie;
 import movieService.model.Seat;
 import movieService.model.Theater;
@@ -14,12 +14,10 @@ import movieService.model.User;
 
 public class MovieBooking {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		// ArrayList<MovieSchedule> ms = new ArrayList<>();
 
-
-  		Context<Reservation> reservContext = new Context<>();
-
+		Context<Reservation> reservContext = new Context<>();
 
 		String welcomMsg = """
 				영화관에 오신 것을 환영합니다 !
@@ -33,11 +31,10 @@ public class MovieBooking {
 				선택>
 				""";
 
-		
-
 		Scanner sc = new Scanner(System.in);
+		Connection conn = MakeConnection.getConnection();
 
-		//welcom 메세지 출력
+		// welcom 메세지 출력
 		System.out.println(welcomMsg);
 
 		boolean run = true;
@@ -54,177 +51,181 @@ public class MovieBooking {
 			switch (loginMenu) {
 
 			case "1" -> {
-				User.signUp(sc, reservContext);
+				User.signUp(sc, reservContext, conn);
 				System.out.println("<예매를 위해서 로그인을 먼저 진행해주세요.>");
 				break;
 			}
 
 			case "2" -> {
-				User.login(sc, reservContext);
-				mainMenu(sc, reservContext);
+				User.login(sc, reservContext, conn);
+				// 로그인 성공 후 Reservation 객체 생성
+				String keyId = LoginSession.getCurrentId();
+				if (!reservContext.getData().containsKey(keyId)) {
+					reservContext.getData().put(keyId, new Reservation(keyId, null));
+				}
+				mainMenu(sc, reservContext, conn);
 				// run = false;
 			}
 			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
 
-		
-		
 	}
 
-		enum Step {
-    MOVIE, THEATER, DATE, TIME, PEOPLE, SEAT, PAYMENT, EXIT
-}
+	enum Step {
+		MOVIE, THEATER, DATE, TIME, PEOPLE, SEAT, PAYMENT, EXIT
+	}
 
-		public static void mainMenu(Scanner sc, Context<Reservation> reservContext) {
-			String menuMsg = """
-					-----------------------------------------------------
-					1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 로그아웃
-					-----------------------------------------------------
-					선택>
-					""";
+	public static void mainMenu(Scanner sc, Context<Reservation> reservContext, Connection conn) {
 
-			Context<Integer[][]> seatContext = new Context<>();
-			Seat seatManager = new Seat(seatContext);
+		String menuMsg = """
+				-----------------------------------------------------
+				1. 티켓조회 | 2.영화별예매 | 3.극장별예매 | 4. 로그아웃
+				-----------------------------------------------------
+				선택>
+				""";
 
-			Theater t = new Theater("");
-			Movie m = new Movie();
+		Context<Integer[][]> seatContext = new Context<>();
+		Seat seatManager = new Seat(seatContext);
 
-			while (true) {
-				System.out.println(menuMsg);
-				String mainMenu = sc.nextLine();
+		Theater t = new Theater("");
+		Movie m = new Movie();
 
-				switch (mainMenu) {
-					case "1" -> { // 티켓 조회
-						Reservation.issueTicket(sc, reservContext,seatManager);
-						// System.out.println(ticketInfo);
-						
-						
-					}
+		while (true) {
+			System.out.println(menuMsg);
+			String mainMenu = sc.nextLine();
 
-					case "2" -> { // 영화별 예매
-						runReservation(sc, reservContext, seatManager, m, t, true, mainMenu);
-					}
+			switch (mainMenu) {
+			case "1" -> { // 티켓 조회
+				Reservation.issueTicket(sc, conn);
+				// System.out.println(ticketInfo);
 
-					case "3" -> { // 극장별 예매
-						runReservation(sc, reservContext, seatManager, m, t, false, mainMenu);
-					}
+			}
 
-					case "4" -> { // 로그아웃
-						System.out.println("로그아웃 합니다. 로그인 메뉴로 돌아갑니다.");
-						return;
-					}
+			case "2" -> { // 영화별 예매
 
-					default -> System.out.println("메뉴 번호 다시 확인하세요.");
-				}
+				runReservation(sc, reservContext, seatManager, m, t, true, mainMenu, conn);
+			}
+
+			case "3" -> { // 극장별 예매
+				runReservation(sc, reservContext, seatManager, m, t, false, mainMenu, conn);
+			}
+
+			case "4" -> { // 로그아웃
+				System.out.println("로그아웃 합니다. 로그인 메뉴로 돌아갑니다.");
+				return;
+			}
+
+			default -> System.out.println("메뉴 번호 다시 확인하세요.");
 			}
 		}
+	}
 
-		private static void runReservation(
-			Scanner sc,
-			Context<Reservation> reservContext,
-			Seat seatManager,
-			Movie m,
-			Theater t,
-			boolean movieFirst, // true면 영화별 예매, false면 극장별 예매
-			String mainMenu
-		) {
-			Step step = movieFirst ? Step.MOVIE : Step.THEATER;
-			String theaterName = "";
-			String movieName = "";
+	private static void runReservation(Scanner sc, Context<Reservation> reservContext, Seat seatManager, Movie m,
+			Theater t, boolean movieFirst, // true면 영화별 예매, false면 극장별 예매
 
-    while (step != Step.EXIT) {
-        switch (step) {
+			String mainMenu, Connection conn) {
 
-            case MOVIE -> {
+		Step step = movieFirst ? Step.MOVIE : Step.THEATER;
+		String theaterId = "";
+		String movieId = "";
+		Context<Integer[][]> seatCacheContext = new Context<>();
+
+		while (step != Step.EXIT) {
+			switch (step) {
+
+			case MOVIE -> {
 				// 영화별예매 선택 시
-                if (movieFirst) {
-                    // 영화 선택
-                    movieName = m.selectMovie(sc, reservContext, theaterName);
-                    if (movieName == null) {
-                        step = Step.EXIT; // 취소 시 메뉴로 돌아감
-                    } else {
-						//영화별 선택 (영화선택 후 극장 선택 -> selectTheaterTime호출)
-                        step = Step.THEATER;
-                    }
+				if (movieFirst) {
+					// 영화 선택
+					movieId = m.selectMovie(sc, reservContext, null, conn);
+					if (movieId == null) {
+						step = Step.EXIT; // 취소 시 메뉴로 돌아감
+					} else {
+						// 영화별 선택 (영화선택 후 극장 선택 -> selectTheaterTime호출)
+						step = Step.THEATER;
+					}
 					// 극장별 예매일경우(극장 선택됨 -> 영화선택후 날짜)
-                } else {
-					movieName = m.selectMovie(sc, reservContext, theaterName);
-					//취소시 극장 선택으로 돌아감
-                    if (movieName == null) {
-                        step = Step.THEATER;
-                    } else {
-						//영화 선택까지됨 -> 날짜선택
-                        step = Step.DATE;
-                    }
-                    
-                }
-            }
+				} else {
+					movieId = m.selectMovie(sc, reservContext, theaterId, conn);
+					// 취소시 극장 선택으로 돌아감
+					if (movieId == null) {
+						step = Step.THEATER;
+					} else {
+						// 영화 선택까지됨 -> 날짜선택
+						step = Step.DATE;
+					}
 
-            case THEATER -> {
-                if (!movieFirst) {
-                    // 극장별 예매: 영화 선택 + 시간 선택
-                    theaterName = t.selectTheater(sc, reservContext);
-					if (theaterName == null) {
-						 step = Step.EXIT; // 취소 시 메뉴로 돌아감
-                    } else {
-						//극장 선택 시, 영화 선택으로 감
+				}
+			}
+
+			case THEATER -> {
+				if (!movieFirst) {
+					// 극장별 예매: 영화 선택 + 시간 선택
+
+					theaterId = t.selectTheater(sc, reservContext, conn);
+
+					if (theaterId == null) {
+
+						step = Step.EXIT; // 취소 시 메뉴로 돌아감
+					} else {
+						// 극장 선택 시, 영화 선택으로 감
 						step = Step.MOVIE;
-                    }
-                } else {
-                    // 영화별 예매: 영화선택 된 상태로 극장 선택 
-                    boolean ok = Theater.selectTheaterTime(sc, reservContext, movieName);
-                    step = ok ? Step.DATE : Step.MOVIE;
-                }
-            }
+					}
+				} else {
+					// 영화별 예매: 영화선택 된 상태로 극장 선택
 
-            case DATE -> {
-                boolean ok = Movie.selectDate(sc, reservContext);
-                step = ok ? Step.TIME : (movieFirst ? Step.THEATER : Step.MOVIE);
-            }
+					boolean ok = Theater.selectTheaterTime(sc, reservContext, movieId, conn);
 
-            case TIME -> {
-                boolean ok = Reservation.selectTime(sc, reservContext);
-                step = ok ? Step.PEOPLE : Step.DATE;
-            }
+					step = ok ? Step.DATE : Step.MOVIE;
+				}
+			}
 
-            case PEOPLE -> {
-                int peopleNum = Reservation.inputPeople(sc, reservContext);
-				System.out.println("입렵된 인원 수 : "+ peopleNum);
-                // 인원수를 남은좌석에 반영하기 위한 코드 추가*
+			case DATE -> {
+				boolean ok = Movie.selectDate(sc, reservContext, conn);
+				step = ok ? Step.TIME : (movieFirst ? Step.THEATER : Step.MOVIE);
+			}
+
+			case TIME -> {
+				boolean ok = Reservation.selectTime(sc, reservContext, conn);
+				step = ok ? Step.PEOPLE : Step.DATE;
+			}
+
+			case PEOPLE -> {
+				int peopleNum = Reservation.inputPeople(sc, reservContext);
+				System.out.println("입렵된 인원 수 : " + peopleNum);
+				// 인원수를 남은좌석에 반영하기 위한 코드 추가*
 				Reservation reserv = reservContext.getData().get(LoginSession.getCurrentId());
-				int seatnum = Seat.getRemainingSeats(
-				reserv.getMovie().getTitle() + "_" + reserv.getTheater().getTheaterName() + "_" + reserv.getTime()
-				);
+				String scheduleId = reserv.getScheduleId(); // Reservation 객체에서 schedule_id 가져오기
+				int seatnum = Seat.getRemainingSeats(scheduleId, conn);
 				int result = seatnum - peopleNum;
 
-                 if(result<0){
+				if (result < 0) {
 					System.out.println("남은 좌석이 없습니다.");
 					continue;
-                } else {
-                    step = Step.SEAT;
-                }
-            }
+				} else {
+					step = Step.SEAT;
+				}
+			}
 
-            case SEAT -> {
-                seatManager.selectSeat(sc, reservContext);
-                step = Step.PAYMENT;
-            }
+			case SEAT -> {
+				seatManager.selectSeat(sc, reservContext, seatCacheContext, conn); // 좌석 선택
+				Reservation r = reservContext.getData().get(LoginSession.getCurrentId());
+//				System.out.println("main 선택 후 Reservation seat: " + r.getSeat()); // debug
+				step = Step.PAYMENT;
+			}
 
-            case PAYMENT -> {
-                 Reservation.submitPayment(sc, reservContext,seatManager);
-                step = Step.EXIT;
-            }
-        }
-    }
-}
+			case PAYMENT -> {
+				boolean paymentDone = Reservation.submitPayment(sc, reservContext, seatManager, seatCacheContext, conn);
+				step = paymentDone ? Step.EXIT : Step.SEAT;
+			}
 
+//			case PAYMENT -> {
+//				Reservation.submitPayment(sc, reservContext, seatManager, seatCacheContext, conn);
+//				step = Step.EXIT;
+//			}
+			}
+		}
+	}
 
-
-        
-
-		
-
-
-	
 }
