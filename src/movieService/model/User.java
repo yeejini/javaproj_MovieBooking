@@ -106,6 +106,38 @@ public class User {
 
 	}
 
+	// 웹 회원가입 메서드 
+	public static String signUpWeb(String id, String name, int pw, Connection conn) {
+    // 아이디/비밀번호 형식 체크
+    if (id == null || name == null) return "Missing id or name";
+    if (!id.matches("^[a-zA-Z]{4}$")) return "Invalid id format";
+    if (pw < 1000 || pw > 9999) return "Password must be 4 digits";
+
+    try {
+        // 중복 체크
+        String sql = "SELECT COUNT(*) FROM User WHERE user_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                rs.next();
+                int count = rs.getInt(1);
+                if (count > 0) return "User already exists";
+            }
+        }
+        // DB에 INSERT
+        sql = "INSERT INTO User (user_id, name, password) VALUES (?, ?, ?)";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, id);
+            pstmt.setString(2, name);
+            pstmt.setInt(3, pw);
+            pstmt.executeUpdate();
+        }
+        return "Signup successful";
+    } catch (SQLException e) {
+        return "DB Error: " + e.getMessage();
+    }
+}
+
 	// 로그인 메서드
 	public static void login(Scanner sc, Context<Reservation> reservContext, Connection conn) throws SQLException {
 		System.out.println("<로그인 정보 입력>");

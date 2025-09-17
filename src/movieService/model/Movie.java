@@ -11,14 +11,12 @@ import java.util.Scanner;
 import movieService.controller.Context;
 import movieService.controller.LoginSession;
 import movieService.controller.Reservation;
-import movieService.data.MovieSchedule;
 
 public class Movie {
 	private String movieId;
 	private String title;
 	private String date;
 
-	ArrayList<MovieSchedule> ms = new ArrayList<>();
 	// 로그인 세션에 임시저장된 id값 가져옴
 	String keyId = LoginSession.getCurrentId();
 

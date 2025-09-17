@@ -24,7 +24,7 @@ services:
 
   # Java 앱 컨테이너
   app:
-    image: kangyejini/movieservice:complete   # Java 앱 이미지
+    image: kangyejini/movieservice:test3   # Java 앱 이미지
     container_name: movie-app
     depends_on:
       db:
