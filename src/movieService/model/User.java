@@ -106,37 +106,45 @@ public class User {
 
 	}
 
-	// 웹 회원가입 메서드 
+	// 웹 회원가입 메서드
 	public static String signUpWeb(String id, String name, int pw, Connection conn) {
-    // 아이디/비밀번호 형식 체크
-    if (id == null || name == null) return "Missing id or name";
-    if (!id.matches("^[a-zA-Z]{4}$")) return "Invalid id format";
-    if (pw < 1000 || pw > 9999) return "Password must be 4 digits";
+		// 아이디/비밀번호 형식 체크
+		if (id == null || name == null) {
+			return "Missing id or name";
+		}
+		if (!id.matches("^[a-zA-Z]{4}$")) {
+			return "Invalid id format";
+		}
+		if (pw < 1000 || pw > 9999) {
+			return "Password must be 4 digits";
+		}
 
-    try {
-        // 중복 체크
-        String sql = "SELECT COUNT(*) FROM User WHERE user_id = ?";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, id);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                rs.next();
-                int count = rs.getInt(1);
-                if (count > 0) return "User already exists";
-            }
-        }
-        // DB에 INSERT
-        sql = "INSERT INTO User (user_id, name, password) VALUES (?, ?, ?)";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, id);
-            pstmt.setString(2, name);
-            pstmt.setInt(3, pw);
-            pstmt.executeUpdate();
-        }
-        return "Signup successful";
-    } catch (SQLException e) {
-        return "DB Error: " + e.getMessage();
-    }
-}
+		try {
+			// 중복 체크
+			String sql = "SELECT COUNT(*) FROM User WHERE user_id = ?";
+			try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+				pstmt.setString(1, id);
+				try (ResultSet rs = pstmt.executeQuery()) {
+					rs.next();
+					int count = rs.getInt(1);
+					if (count > 0) {
+						return "User already exists";
+					}
+				}
+			}
+			// DB에 INSERT
+			sql = "INSERT INTO User (user_id, name, password) VALUES (?, ?, ?)";
+			try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+				pstmt.setString(1, id);
+				pstmt.setString(2, name);
+				pstmt.setInt(3, pw);
+				pstmt.executeUpdate();
+			}
+			return "Signup successful";
+		} catch (SQLException e) {
+			return "DB Error: " + e.getMessage();
+		}
+	}
 
 	// 로그인 메서드
 	public static void login(Scanner sc, Context<Reservation> reservContext, Connection conn) throws SQLException {
@@ -161,16 +169,6 @@ public class User {
 				String dbId = rs.getString("user_id");
 				String dbName = rs.getString("name");
 				int dbPw = rs.getInt("password");
-
-				// Map에서 해당 id에 대응되는 User 가져오기
-//				Reservation reservation = reservContext.getData().get(inputId); // 여기서 실제 User 객체를 가져오는 것
-				//
-//				if (reservation == null) {
-//					System.out.println("일치하는 id가 존재하지 않습니다.");
-//					continue; // 재입력
-//				}
-
-//				User user = reservation.getUser(); // null 체크 후 안전하게 가져오기
 
 				while (true) {
 					System.out.println("password를 입력하세요. : ");
@@ -198,6 +196,32 @@ public class User {
 
 		}
 
+	}
+
+	// 기존 콘솔 로직 기반 로그인 처리
+	public static String loginWeb(String inputId, int inputPw, Connection conn) {
+		String sql = "SELECT user_id, name, password FROM User WHERE user_id = ?";
+		try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+			pstmt.setString(1, inputId);
+			try (ResultSet rs = pstmt.executeQuery()) {
+				if (!rs.next()) {
+					return "User not found";
+				}
+
+				String dbId = rs.getString("user_id");
+				String dbName = rs.getString("name");
+				int dbPw = rs.getInt("password");
+
+				if (dbPw == inputPw) {
+					LoginSession.setCurrentId(dbId); // 로그인 세션 설정
+					return dbName + "님 로그인 성공!";
+				} else {
+					return "Invalid password";
+				}
+			}
+		} catch (Exception e) {
+			return "DB Error: " + e.getMessage();
+		}
 	}
 
 }
