@@ -7,7 +7,9 @@ import java.sql.Connection;
 import com.sun.net.httpserver.HttpServer;
 
 import movieService.server.LoginHandler;
+import movieService.server.MovieHandler;
 import movieService.server.SignUpHandler;
+import movieService.server.TheaterHandler;
 
 public class MovieServer {
 
@@ -27,6 +29,8 @@ public class MovieServer {
 		// 핸들러에 DB 커넥션 주입
 		server.createContext("/signup", new SignUpHandler(conn));
 		server.createContext("/login", new LoginHandler(conn)::handle);
+		server.createContext("/movies", new MovieHandler(conn));
+		server.createContext("/theaters", new TheaterHandler(conn));
 
 		server.setExecutor(null); // 기본 executor 사용
 		System.out.println("HTTP 서버가 " + port + "번 포트에서 시작되었습니다.");
