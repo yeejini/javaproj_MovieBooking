@@ -72,7 +72,7 @@ public class MovieHandler implements HttpHandler {
                 for (int i = 0; i < movies.size(); i++) {
                     Movie m = movies.get(i);
                     json.append("{")
-                        .append("\"movieId\":\"").append(m.getMovieId()).append("\",")
+                        .append("\"movie_id\":\"").append(m.getMovieId()).append("\",")
                         .append("\"title\":\"").append(m.getTitle()).append("\"")
                         .append("}");
                     if (i < movies.size() - 1) json.append(",");
